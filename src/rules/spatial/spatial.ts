@@ -148,13 +148,17 @@ function compile(rule: spatial_rule): spatial_compiled {
                 if (!scopeCells.has(token))
                     scopeCells.set(token, cells.compile(rule.scope[token]));
 
+                const c = scopeCells.get(token)!;
+
                 reqs.push({
                     id: tokenIds.get(token)!,
                     x: +x,
                     y: +y,
-                    cell: scopeCells.get(token)!,
+                    cell: c,
                 });
-                continue;
+
+                // Only stop if cell is determinstic
+                if (!c.cell.quantum) continue;
             }
 
             // If not required: extract free tokens
@@ -198,7 +202,9 @@ function compile(rule: spatial_rule): spatial_compiled {
             }
 
             const tokenId = tokenIds.get(to)!;
-            if (quantum) {
+
+            // Only need to track cell if not already pulling from a free token
+            if (resolved) {
                 // Compile cell if required
                 if (!scopeCells.has(to))
                     scopeCells.set(to, cells.compile(rule.scope[to]));
@@ -285,17 +291,27 @@ function exec(
         if (!cells.matches(req.cell, targetCell)) return null;
     }
 
+    const qcells = new Map<number, _cells.fcell_t>();
+
+    // Prefill qcells with precomputed qcells
+    for (const id in rule.diffs.qcells) {
+        const c = rule.diffs.qcells[id];
+        qcells.set(
+            +id,
+            (c.cell as _cells.QuantumCell<any, any, any>).exec(c.data),
+        );
+    }
+
     // Gather free token cells
-    const freeCells = new Map<number, _cells.fcell_t>();
     for (const free of rule.frees) {
         const targetCell = grid.cell(x + free.x, y + free.y);
-        freeCells.set(free.id, targetCell);
+        qcells.set(free.id, targetCell);
     }
 
     // Generate cell differences
     const diffs: _rules.cdiff[] = [...rule.diffs.cdiffs];
     for (const ddiff of rule.diffs.ddiffs) {
-        const targetCell = freeCells.get(ddiff.id);
+        const targetCell = qcells.get(ddiff.id);
         if (!targetCell) continue; // Free token not found, skip!
 
         diffs.push({

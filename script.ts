@@ -10,21 +10,26 @@ import {
 // Import rules + cells
 import "./src/cells/color/color.js";
 import "./src/cells/not/not.js";
+import "./src/cells/range/range.js";
 import "./src/rules/spatial/spatial.js";
 import "./src/rules/sequence/sequence.js";
 import "./src/rules/quantum/quantum.js";
 
 // Define cells
 const sand = {
-    type: "color",
-    r: 194,
-    g: 178,
-    b: 128,
-} satisfies cell_t;
-
-const nsand = {
-    type: "not",
-    cell: sand,
+    type: "range",
+    min: {
+        type: "color",
+        r: 101,
+        g: 178,
+        b: 128,
+    },
+    max: {
+        type: "color",
+        r: 200,
+        g: 178,
+        b: 128,
+    },
 } satisfies cell_t;
 
 const air = {
@@ -132,7 +137,9 @@ function print() {
                         ? "  "
                         : (c.data as any).r === 100
                           ? "//"
-                          : "##",
+                          : ((c.data as any).r ?? 0)
+                                .toString(16)
+                                .padStart(2, "0"),
                 )
                 .join(""),
         )
@@ -152,7 +159,16 @@ const interval = setInterval(() => {
     step(myGrid, rule);
     console.timeEnd();
 
-    myGrid.cells[0][Math.floor((myGrid.cells[0].length - 1) / 2)] = csand;
+    if (
+        // @ts-ignore
+        myGrid.cells[0][Math.floor((myGrid.cells[0].length - 1) / 2)].data.r ===
+        0
+    ) {
+        // @ts-ignore
+        myGrid.cells[0][Math.floor((myGrid.cells[0].length - 1) / 2)] =
+            // @ts-ignore
+            csand.cell.exec(csand.data);
+    }
 
     if (print()) clearInterval(interval);
 }, 10);
