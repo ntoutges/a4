@@ -162,7 +162,7 @@ function compile(rule: spatial_rule): spatial_compiled {
             }
 
             // If not required: extract free tokens
-            if (afterTokens.has(token)) {
+            if (afterTokens.has(token) && !freeSet.has(token)) {
                 frees.push({
                     id: tokenIds.get(token)!,
                     x: +x,
@@ -283,15 +283,22 @@ function exec(
     grid: Readonly<_grids.grid_slice_t>,
     reserved: ReadonlySet<number>,
 ): _rules.cdiff[] | null {
+    const qcells = new Map<number, _cells.fcell_t>();
+
     // Check if all required tokens match
     for (const req of rule.reqs) {
         const targetCell = grid.cell(x + req.x, y + req.y);
 
-        // Failed to match required token, rule fails
-        if (!cells.matches(req.cell, targetCell)) return null;
-    }
+        // No token yet found for this requirement; Attempt to find one
+        if (!qcells.has(req.id)) {
+            qcells.set(req.id, targetCell);
 
-    const qcells = new Map<number, _cells.fcell_t>();
+            // Failed to match required token, rule fails
+            if (!cells.matches(req.cell, targetCell)) return null;
+        }
+        // Exact token already found for this requirement; Check if it matches
+        else if (!cells.matches(req.cell, targetCell)) return null;
+    }
 
     // Prefill qcells with precomputed qcells
     for (const id in rule.diffs.qcells) {
@@ -324,7 +331,9 @@ function exec(
     return diffs;
 }
 
-// Register rule
+// +---------------+
+// | Register rule |
+// +---------------+
 declare module "../../rule_types.js" {
     interface rule_registry {
         spatial: {
