@@ -11,25 +11,50 @@ import {
 import "./src/cells/color/color.js";
 import "./src/cells/not/not.js";
 import "./src/cells/range/range.js";
+import "./src/cells/set/set.js";
 import "./src/rules/spatial/spatial.js";
 import "./src/rules/sequence/sequence.js";
 import "./src/rules/quantum/quantum.js";
 
 // Define cells
+// const sand = {
+//     type: "range",
+//     min: {
+//         type: "color",
+//         r: 101,
+//         g: 178,
+//         b: 128,
+//     },
+//     max: {
+//         type: "color",
+//         r: 200,
+//         g: 178,
+//         b: 128,
+//     },
+// } satisfies cell_t;
+
 const sand = {
-    type: "range",
-    min: {
-        type: "color",
-        r: 101,
-        g: 178,
-        b: 128,
-    },
-    max: {
-        type: "color",
-        r: 200,
-        g: 178,
-        b: 128,
-    },
+    type: "set",
+    cells: [
+        {
+            type: "color",
+            r: 101,
+            g: 178,
+            b: 128,
+        },
+        {
+            type: "color",
+            r: 200,
+            g: 178,
+            b: 128,
+        },
+        {
+            type: "color",
+            r: 150,
+            g: 178,
+            b: 128,
+        },
+    ],
 } satisfies cell_t;
 
 const air = {
