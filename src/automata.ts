@@ -37,10 +37,10 @@ function execute(
 
     // Precompute the bounds of the area to run the rule on based on the rule metadata and grid size, to
     // Ensure the rule is only run on areas where it is guaranteed to be valid and not go out of bounds of the grid
-    const minY = metadata.originY;
-    const maxY = grid.height - (metadata.height - metadata.originY);
-    const minX = metadata.originX;
-    const maxX = grid.width - (metadata.width - metadata.originX);
+    const minY = -metadata.minY;
+    const maxY = grid.height - metadata.maxY;
+    const minX = -metadata.minX;
+    const maxX = grid.width - metadata.maxX;
 
     // Keep track of all cell differences resulting from running the rule on the grid
     // Prevents 1 cell from being modified multiple times in the same step
@@ -49,6 +49,7 @@ function execute(
     // Store all cell differences resulting from running the rule on the grid
     const allDiffs: rules.cdiff[] = [];
 
+    console.log(minX, minY, maxX, maxY);
     yloop: for (let y = minY; y <= maxY; y++) {
         xloop: for (let x = minX; x <= maxX; x++) {
             const diffs = rules.execute(rule, x, y, grid, reserved);
@@ -130,6 +131,7 @@ export function getReservationKey(
 
 import "./cells/color/color.js";
 import "./rules/spatial/spatial.js";
+import "./rules/sequence/sequence.js";
 
 const sand = {
     type: "color",
@@ -157,16 +159,26 @@ const ruled = {
     },
 } satisfies rules.rule_t;
 
-const rule = rules.compile(ruled);
+const ruler = {
+    type: "spatial",
+    before: `@ A
+             B A`,
+    after: `A A
+            B @`,
+    scope: {
+        "@": sand,
+        B: sand,
+        A: air,
+    },
+} satisfies rules.rule_t;
+
+const rule = rules.compile({
+    type: "sequence",
+    rules: [ruled, ruler],
+});
 
 const cair = cells.compile(air);
 const csand = cells.compile(sand);
-
-// const dat = [
-//     [csand, cair],
-//     [cair, csand],
-//     [cair, cair],
-// ] satisfies grid_t["cells"];
 
 const dat: grid_t["cells"] = Array.from({ length: 10 }, () =>
     Array.from({ length: 10 }, () => cair),
@@ -183,6 +195,7 @@ const grid = {
             x1 < 0 || x1 >= width || y1 < 0 || y1 >= height
                 ? cair
                 : dat[y + y1][x + x1],
+        index: (x1: number, y1: number) => (y + y1) * dat[0].length + (x + x1),
     }),
 } satisfies grid_t;
 

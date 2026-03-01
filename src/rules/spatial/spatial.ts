@@ -5,21 +5,14 @@
  * @copyright 2026 PiCO
  */
 
-import {
-    register,
-    scope_t,
-    fcell_t,
-    grid_slice_t,
-    cdiff,
-    base_rule,
-} from "../../rules.js";
+import * as rules from "../../rules.js";
 import * as cells from "../../cells.js";
 
 export type spatial_rule = {
     type: "spatial";
     before: string;
     after: string;
-    scope: scope_t;
+    scope: rules.scope_t;
 };
 
 type spatial_compiled = {
@@ -35,7 +28,7 @@ type spatial_compiled = {
         id: number;
 
         /** The required cell at this position */
-        cell: fcell_t;
+        cell: rules.fcell_t;
     }[];
 
     /** Non-required tokens whose cell types must be gathered */
@@ -53,7 +46,7 @@ type spatial_compiled = {
     /** The cell differences that must be applied to the grid */
     diffs: {
         /** Constant cell differences that must be applied to the grid */
-        cdiffs: cdiff[];
+        cdiffs: rules.cdiff[];
 
         /** Dynamic cell differences that must be applied to the grid */
         ddiffs: {
@@ -67,7 +60,7 @@ type spatial_compiled = {
             id: number;
         }[];
     };
-} & base_rule;
+} & rules.base_rule;
 
 function compile(rule: spatial_rule): spatial_compiled {
     const before = ptokenize(rule.before);
@@ -121,7 +114,7 @@ function compile(rule: spatial_rule): spatial_compiled {
     // @TODO: Update `diffs` to remove identical cells with different tokens
 
     // Lazy compile required cells
-    const scopeCells = new Map<string, fcell_t>();
+    const scopeCells = new Map<string, rules.fcell_t>();
 
     // Parse tokens
     const reqs: spatial_compiled["reqs"] = [];
@@ -224,10 +217,10 @@ function compile(rule: spatial_rule): spatial_compiled {
             ddiffs,
         },
         metadata: {
-            width: before[0].length,
-            height: before.length,
-            originX: originX,
-            originY: originY,
+            minX: -originX,
+            minY: -originY,
+            maxX: before[0].length - originX,
+            maxY: before.length - originY,
         },
     };
 }
@@ -244,9 +237,9 @@ function exec(
     rule: spatial_compiled,
     x: number,
     y: number,
-    grid: Readonly<grid_slice_t>,
+    grid: Readonly<rules.grid_slice_t>,
     reserved: ReadonlySet<number>,
-): cdiff[] | null {
+): rules.cdiff[] | null {
     // Check if all required tokens match
     for (const req of rule.reqs) {
         const targetCell = grid.cell(x + req.x, y + req.y);
@@ -256,14 +249,14 @@ function exec(
     }
 
     // Gather free token cells
-    const freeCells = new Map<number, fcell_t>();
+    const freeCells = new Map<number, rules.fcell_t>();
     for (const free of rule.frees) {
         const targetCell = grid.cell(x + free.x, y + free.y);
         freeCells.set(free.id, targetCell);
     }
 
     // Generate cell differences
-    const diffs: cdiff[] = [...rule.diffs.cdiffs];
+    const diffs: rules.cdiff[] = [...rule.diffs.cdiffs];
     for (const ddiff of rule.diffs.ddiffs) {
         const targetCell = freeCells.get(ddiff.id);
         if (!targetCell) continue; // Free token not found, skip!
@@ -288,7 +281,7 @@ declare module "../../types.js" {
     }
 }
 
-register({
+rules.register({
     type: "spatial",
     compile,
     exec,

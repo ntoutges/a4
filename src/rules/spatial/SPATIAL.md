@@ -61,8 +61,8 @@ The following spatial rule shows a bubble of air moving upwards
 ```ts
 
 // Assume air/water are defined cell types
-const air: cell_t = {};
-const water: cell_t = {};
+const air: cell_t = { /* ... */ };
+const water: cell_t = { /* ... */ };
 
 const rule: spatial_rule = {
     type: "spatial",

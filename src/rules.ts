@@ -77,5 +77,5 @@ export function execute(
     grid: Readonly<grid_slice_t>,
     reserved: ReadonlySet<number>,
 ): cdiff[] | null {
-    return rule.rule.exec(rule.data, x, y, grid, reserved);
+    return rule.rule.exec(rule.data as any, x, y, grid, reserved);
 }

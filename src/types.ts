@@ -27,17 +27,17 @@ export type cdiff = {
 
 export type base_rule = {
     metadata: {
-        /** The width of the required area of the rule */
-        width: number;
+        /** The minimum x coordinate of the rule's bounding box */
+        minX: number;
 
-        /** The height of the required area of the rule */
-        height: number;
+        /** The minimum y coordinate of the rule's bounding box */
+        minY: number;
 
-        /** The x offset of the rule's origin relative to the grid */
-        originX: number;
+        /** The maximum x coordinate of the rule's bounding box */
+        maxX: number;
 
-        /** The y offset of the rule's origin relative to the grid */
-        originY: number;
+        /** The maximum y coordinate of the rule's bounding box */
+        maxY: number;
     };
 };
 
@@ -211,6 +211,14 @@ export type grid_slice_t = {
      * @param y
      */
     cell(x: number, y: number): Readonly<fcell_t>;
+
+    /**
+     * Get the unique id of a cell in the grid slice at the given coordinates, relative to the top-left corner of the grid slice.
+     * @param x
+     * @param y
+     * @returns A unique id for the cell at the given coordinates, used for tracking reserved cells during rule execution
+     */
+    index(x: number, y: number): number;
 
     /** The width of the grid slice */
     width: number;
