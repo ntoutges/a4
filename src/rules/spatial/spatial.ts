@@ -1,0 +1,295 @@
+/**
+ * @file spatial.ts
+ * @description Spatial rule, using string-based pictures to define rules in a more user-friendly way
+ * @author Nicholas T.
+ * @copyright 2026 PiCO
+ */
+
+import {
+    register,
+    scope_t,
+    fcell_t,
+    grid_slice_t,
+    cdiff,
+    base_rule,
+} from "../../rules.js";
+import * as cells from "../../cells.js";
+
+export type spatial_rule = {
+    type: "spatial";
+    before: string;
+    after: string;
+    scope: scope_t;
+};
+
+type spatial_compiled = {
+    /** Requirements that the original spatial rule must satisfy */
+    reqs: {
+        /** The x-coordinate of this compiled spatial rule component */
+        x: number;
+
+        /** The y-coordinate of this compiled spatial rule component */
+        y: number;
+
+        /** The unique identifier of the token at this position */
+        id: number;
+
+        /** The required cell at this position */
+        cell: fcell_t;
+    }[];
+
+    /** Non-required tokens whose cell types must be gathered */
+    frees: {
+        /** The x-coordinate of this compiled spatial rule component */
+        x: number;
+
+        /** The y-coordinate of this compiled spatial rule component */
+        y: number;
+
+        /** The unique identifier of the token at this position */
+        id: number;
+    }[];
+
+    /** The cell differences that must be applied to the grid */
+    diffs: {
+        /** Constant cell differences that must be applied to the grid */
+        cdiffs: cdiff[];
+
+        /** Dynamic cell differences that must be applied to the grid */
+        ddiffs: {
+            /** The x offset of the dynamic cell difference */
+            x: number;
+
+            /** The y offset of the dynamic cell difference */
+            y: number;
+
+            /** The id of the dynamic cell difference */
+            id: number;
+        }[];
+    };
+} & base_rule;
+
+function compile(rule: spatial_rule): spatial_compiled {
+    const before = ptokenize(rule.before);
+    const after = ptokenize(rule.after);
+
+    // Check if before and after pictures are the same size
+    if (
+        before.length !== after.length ||
+        before[0].length !== after[0].length
+    ) {
+        throw new Error("Before and after pictures must be the same size");
+    }
+
+    // Ensure `before` token has <= 1 "@" token
+    if (before.flat().filter((t) => t === "@").length > 1) {
+        throw new Error("Before picture cannot have more than one @ token");
+    }
+
+    // Extract all tokens from before and after pictures
+    const beforeTokens = new Set(before.flat());
+    const afterTokens = new Set(after.flat());
+
+    // Map tokens to unique ids, ensuring that tokens in the scope have the same id in both before and after pictures
+    const tokenIds = new Map<string, number>();
+    let nextId = 0;
+    for (const token of beforeTokens) {
+        if (!tokenIds.has(token)) tokenIds.set(token, nextId++);
+    }
+    for (const token of afterTokens) {
+        if (!tokenIds.has(token)) tokenIds.set(token, nextId++);
+    }
+
+    // Find differences in tokens between before and after pictures
+    const diffs = new Map<string, { to: string; x: number; y: number }[]>(); // Map (from) => [{to, x, y}]
+    for (let y in before) {
+        for (let x in before[y]) {
+            const from = before[y][x];
+            const to = after[y][x];
+
+            if (from === to) continue; // No change, skip
+
+            if (!diffs.has(from)) diffs.set(from, []);
+            diffs.get(from)!.push({
+                to,
+                x: +x,
+                y: +y,
+            });
+        }
+    }
+
+    // @TODO: Update `diffs` to remove identical cells with different tokens
+
+    // Lazy compile required cells
+    const scopeCells = new Map<string, fcell_t>();
+
+    // Parse tokens
+    const reqs: spatial_compiled["reqs"] = [];
+    const frees: spatial_compiled["frees"] = [];
+    const freeSet = new Set<string>();
+    let originX = 0;
+    let originY = 0;
+    for (let y in before) {
+        for (let x in before[y]) {
+            const token = before[y][x];
+
+            // Extract origin coordinates from "@" token
+            if (token === "@") {
+                originX = +x;
+                originY = +y;
+            }
+
+            // Extract required tokens
+            if (Object.hasOwn(rule.scope, token)) {
+                // Lazy-compile required cell if not already compiled
+                if (!scopeCells.has(token))
+                    scopeCells.set(token, cells.compile(rule.scope[token]));
+
+                reqs.push({
+                    id: tokenIds.get(token)!,
+                    x: +x,
+                    y: +y,
+                    cell: scopeCells.get(token)!,
+                });
+                continue;
+            }
+
+            // If not required: extract free tokens
+            if (afterTokens.has(token)) {
+                frees.push({
+                    id: tokenIds.get(token)!,
+                    x: +x,
+                    y: +y,
+                });
+                freeSet.add(token);
+                continue;
+            }
+        }
+    }
+
+    // Differentiate between cdiffs and ddiffs
+    const cdiffs: spatial_compiled["diffs"]["cdiffs"] = [];
+    const ddiffs: spatial_compiled["diffs"]["ddiffs"] = [];
+
+    for (const [from, changes] of diffs) {
+        for (const { to, x, y } of changes) {
+            if (!beforeTokens.has(to)) continue; // Unused token; Skip!
+
+            // Can only be cdiff if token is both resolved and deterministic
+            if (!freeSet.has(to) && !cells.isQuantum(rule.scope[to])) {
+                // Compile cell if required
+                if (!scopeCells.has(to))
+                    scopeCells.set(to, cells.compile(rule.scope[to]));
+
+                cdiffs.push({
+                    x,
+                    y,
+                    to: scopeCells.get(to)!,
+                });
+                continue;
+            }
+
+            // Dynamic cell difference
+            ddiffs.push({
+                id: tokenIds.get(to)!,
+                x,
+                y,
+            });
+        }
+    }
+
+    // Update all coordinates to be relative to the origin
+    for (const req of reqs) {
+        req.x -= originX;
+        req.y -= originY;
+    }
+    for (const free of frees) {
+        free.x -= originX;
+        free.y -= originY;
+    }
+    for (const cdiff of cdiffs) {
+        cdiff.x -= originX;
+        cdiff.y -= originY;
+    }
+    for (const ddiff of ddiffs) {
+        ddiff.x -= originX;
+        ddiff.y -= originY;
+    }
+
+    return {
+        reqs,
+        frees,
+        diffs: {
+            cdiffs,
+            ddiffs,
+        },
+        metadata: {
+            width: before[0].length,
+            height: before.length,
+            originX: originX,
+            originY: originY,
+        },
+    };
+}
+
+/**
+ * Tokenize a spatial rule picture into a 2D array of tokens, of the format token[y][x]
+ * @param picture   The picture to tokenize
+ */
+function ptokenize(picture: string): string[][] {
+    return picture.split("\n").map((line) => line.trim().split(/\s+/));
+}
+
+function exec(
+    rule: spatial_compiled,
+    x: number,
+    y: number,
+    grid: Readonly<grid_slice_t>,
+    reserved: ReadonlySet<number>,
+): cdiff[] | null {
+    // Check if all required tokens match
+    for (const req of rule.reqs) {
+        const targetCell = grid.cell(x + req.x, y + req.y);
+
+        // Failed to match required token, rule fails
+        if (!cells.matches(req.cell, targetCell)) return null;
+    }
+
+    // Gather free token cells
+    const freeCells = new Map<number, fcell_t>();
+    for (const free of rule.frees) {
+        const targetCell = grid.cell(x + free.x, y + free.y);
+        freeCells.set(free.id, targetCell);
+    }
+
+    // Generate cell differences
+    const diffs: cdiff[] = [...rule.diffs.cdiffs];
+    for (const ddiff of rule.diffs.ddiffs) {
+        const targetCell = freeCells.get(ddiff.id);
+        if (!targetCell) continue; // Free token not found, skip!
+
+        diffs.push({
+            x: ddiff.x,
+            y: ddiff.y,
+            to: targetCell,
+        });
+    }
+
+    return diffs;
+}
+
+// Register rule
+declare module "../../types.js" {
+    interface rule_registry {
+        spatial: {
+            user: spatial_rule;
+            comp: spatial_compiled;
+        };
+    }
+}
+
+register({
+    type: "spatial",
+    compile,
+    exec,
+});
