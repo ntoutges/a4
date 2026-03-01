@@ -7,17 +7,20 @@
 
 import * as rules from "../../rules.js";
 
+import * as _rules from "../../rule_types.js";
+import * as _grids from "../../grid_types.js";
+
 type quantum_rule = {
     type: "quantum";
     max?: number;
 } & (
     | {
           weighted?: false;
-          rules: rules.rule_t[];
+          rules: _rules.rule_t[];
       }
     | {
           weighted: true;
-          rules: { rule: rules.rule_t; weight: number }[];
+          rules: { rule: _rules.rule_t; weight: number }[];
       }
 );
 
@@ -25,7 +28,7 @@ export type quantum_compiled = {
     /** The list of compiled rules */
     rules: {
         /** The compiled rule to randomly apply */
-        rule: rules.frule_t;
+        rule: _rules.frule_t;
 
         /** The weight of this rule; Garunteed to be > 0 */
         weight: number;
@@ -36,7 +39,7 @@ export type quantum_compiled = {
 
     /** The maximum number of child rules to attempt to run; >= 0 */
     max: number;
-} & rules.base_rule;
+} & _rules.base_rule;
 
 function compile(rule: quantum_rule): quantum_compiled {
     // Degenerate case: No child rules, return empty compiled rule
@@ -124,9 +127,9 @@ function exec(
     rule: quantum_compiled,
     x: number,
     y: number,
-    grid: Readonly<rules.grid_slice_t>,
+    grid: Readonly<_grids.grid_slice_t>,
     reserved: ReadonlySet<number>,
-): rules.cdiff[] | null {
+): _rules.cdiff[] | null {
     // Variables used to prevent repeats
     const blacklist: Set<number> = new Set(); // Set of cell indices that have already been tried
     let blacklistWeight = 0; // The total weight of all rules in the blacklist
@@ -209,7 +212,7 @@ function exec(
 // +---------------+
 // | Register rule |
 // +---------------+
-declare module "../../types.js" {
+declare module "../../rule_types.js" {
     interface rule_registry {
         quantum: {
             user: quantum_rule;

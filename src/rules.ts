@@ -5,33 +5,19 @@
  * @copyright 2026 PiCO
  */
 
-import {
-    base_rule,
-    cdiff,
-    frule_t,
-    grid_slice_t,
-    Rule,
-    rule_t,
-} from "./types.js";
-export {
-    scope_t,
-    cdiff,
-    fcell_t,
-    frule_t,
-    rule_t,
-    grid_slice_t,
-    Rule,
-    base_rule,
-} from "./types.js";
+import * as _rules from "./rule_types.js";
+import * as _grids from "./grid_types.js";
 
 /** Registry containing all registered rules */
-const registry = new Map<string, Rule<any, any>>();
+const registry = new Map<string, _rules.Rule<any, any>>();
 
 /**
  * Register a rule to be used in the automata system
  * @param rule  The rule to register
  */
-export function register<R, C extends base_rule>(rule: Rule<R, C>): void {
+export function register<R, C extends _rules.base_rule>(
+    rule: _rules.Rule<R, C>,
+): void {
     const type = rule.type.toLowerCase(); // Normalize rule name
 
     if (registry.has(type)) {
@@ -47,7 +33,7 @@ export function register<R, C extends base_rule>(rule: Rule<R, C>): void {
  * @param rule  The user-friendly rule to compile
  * @returns     The computer-friendly compiled rule to be used at runtime
  */
-export function compile(rule: Readonly<rule_t>): frule_t {
+export function compile(rule: Readonly<_rules.rule_t>): _rules.frule_t {
     const type = rule.type.toLowerCase(); // Normalize rule name
 
     const rule_data = registry.get(type);
@@ -71,11 +57,11 @@ export function compile(rule: Readonly<rule_t>): frule_t {
  * @returns     The cell differences resulting from running the rule on the grid at the specified location
  */
 export function execute(
-    rule: frule_t,
+    rule: _rules.frule_t,
     x: number,
     y: number,
-    grid: Readonly<grid_slice_t>,
+    grid: Readonly<_grids.grid_slice_t>,
     reserved: ReadonlySet<number>,
-): cdiff[] | null {
+): _rules.cdiff[] | null {
     return rule.rule.exec(rule.data as any, x, y, grid, reserved);
 }

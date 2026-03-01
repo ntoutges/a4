@@ -11,7 +11,7 @@ type spatial_rule = {
     type: "spatial";
     before: string; // Before picture
     after: string; // After picture
-    // scope: Record<string, cell_t>;
+    scope: Record<string, cells.cell_t>;
 };
 ```
 

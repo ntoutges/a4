@@ -5,7 +5,8 @@
  * @copyright 2026 PiCO
  */
 
-import { register, fcell_t } from "../../cells.js";
+import * as cells from "../../cells.js";
+import * as _cells from "../../cell_types.js";
 
 export type color_cell = {
     type: "color";
@@ -48,12 +49,12 @@ function lt(a: color_compiled, b: color_compiled): boolean {
     return a.value < b.value;
 }
 
-function matches(a: color_compiled, b: fcell_t): boolean {
+function matches(a: color_compiled, b: _cells.fcell_t): boolean {
     return b.cell.type === "color" ? a.value === b.data.value : false;
 }
 
 // Register type
-register({
+cells.register({
     type: "color",
     quantum: false,
     compile,
@@ -63,7 +64,7 @@ register({
     matches,
 });
 
-declare module "../../types.js" {
+declare module "../../cell_types.js" {
     interface cell_registry {
         color: {
             user: color_cell;

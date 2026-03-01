@@ -8,11 +8,15 @@
 import * as rules from "../../rules.js";
 import * as cells from "../../cells.js";
 
+import * as _rules from "../../rule_types.js";
+import * as _cells from "../../cell_types.js";
+import * as _grids from "../../grid_types.js";
+
 export type spatial_rule = {
     type: "spatial";
     before: string;
     after: string;
-    scope: rules.scope_t;
+    scope: Record<string, _cells.cell_t>;
 };
 
 type spatial_compiled = {
@@ -28,7 +32,7 @@ type spatial_compiled = {
         id: number;
 
         /** The required cell at this position */
-        cell: rules.fcell_t;
+        cell: _cells.fcell_t;
     }[];
 
     /** Non-required tokens whose cell types must be gathered */
@@ -46,7 +50,7 @@ type spatial_compiled = {
     /** The cell differences that must be applied to the grid */
     diffs: {
         /** Constant cell differences that must be applied to the grid */
-        cdiffs: rules.cdiff[];
+        cdiffs: _rules.cdiff[];
 
         /** Dynamic cell differences that must be applied to the grid */
         ddiffs: {
@@ -60,7 +64,7 @@ type spatial_compiled = {
             id: number;
         }[];
     };
-} & rules.base_rule;
+} & _rules.base_rule;
 
 function compile(rule: spatial_rule): spatial_compiled {
     const before = ptokenize(rule.before);
@@ -114,7 +118,7 @@ function compile(rule: spatial_rule): spatial_compiled {
     // @TODO: Update `diffs` to remove identical cells with different tokens
 
     // Lazy compile required cells
-    const scopeCells = new Map<string, rules.fcell_t>();
+    const scopeCells = new Map<string, _cells.fcell_t>();
 
     // Parse tokens
     const reqs: spatial_compiled["reqs"] = [];
@@ -237,9 +241,9 @@ function exec(
     rule: spatial_compiled,
     x: number,
     y: number,
-    grid: Readonly<rules.grid_slice_t>,
+    grid: Readonly<_grids.grid_slice_t>,
     reserved: ReadonlySet<number>,
-): rules.cdiff[] | null {
+): _rules.cdiff[] | null {
     // Check if all required tokens match
     for (const req of rule.reqs) {
         const targetCell = grid.cell(x + req.x, y + req.y);
@@ -249,14 +253,14 @@ function exec(
     }
 
     // Gather free token cells
-    const freeCells = new Map<number, rules.fcell_t>();
+    const freeCells = new Map<number, _cells.fcell_t>();
     for (const free of rule.frees) {
         const targetCell = grid.cell(x + free.x, y + free.y);
         freeCells.set(free.id, targetCell);
     }
 
     // Generate cell differences
-    const diffs: rules.cdiff[] = [...rule.diffs.cdiffs];
+    const diffs: _rules.cdiff[] = [...rule.diffs.cdiffs];
     for (const ddiff of rule.diffs.ddiffs) {
         const targetCell = freeCells.get(ddiff.id);
         if (!targetCell) continue; // Free token not found, skip!
@@ -272,7 +276,7 @@ function exec(
 }
 
 // Register rule
-declare module "../../types.js" {
+declare module "../../rule_types.js" {
     interface rule_registry {
         spatial: {
             user: spatial_rule;

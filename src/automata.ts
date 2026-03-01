@@ -7,8 +7,9 @@
 
 import * as rules from "./rules.js";
 import * as cells from "./cells.js";
-
-import { grid_slice_t, grid_t } from "./types.js";
+import * as _grids from "./grid_types.js";
+import * as _rules from "./rule_types.js";
+import * as _cells from "./cell_types.js";
 
 /**
  * Executes a single step of the automata system, applying the given rule to the given grid and
@@ -16,7 +17,7 @@ import { grid_slice_t, grid_t } from "./types.js";
  * @param grid  The cell grid to apply the rule to
  * @param rule  The rule to apply to the grid
  */
-export function step(grid: grid_t, rule: rules.frule_t): void {
+export function step(grid: _grids.grid_t, rule: _rules.frule_t): void {
     const diffs = execute(grid.slice(0, 0, grid.width, grid.height), rule);
     apply(grid, diffs);
 }
@@ -29,9 +30,9 @@ export function step(grid: grid_t, rule: rules.frule_t): void {
  * @returns     The cell differences resulting from applying the rule to the grid
  */
 function execute(
-    grid: Readonly<grid_slice_t>,
-    rule: rules.frule_t,
-): rules.cdiff[] {
+    grid: Readonly<_grids.grid_slice_t>,
+    rule: _rules.frule_t,
+): _rules.cdiff[] {
     // Metadata describing how the rule is executed
     const metadata = rule.data.metadata;
 
@@ -47,7 +48,7 @@ function execute(
     const reserved: Set<number> = new Set();
 
     // Store all cell differences resulting from running the rule on the grid
-    const allDiffs: rules.cdiff[] = [];
+    const allDiffs: _rules.cdiff[] = [];
 
     yloop: for (let y = minY; y <= maxY; y++) {
         xloop: for (let x = minX; x <= maxX; x++) {
@@ -90,7 +91,7 @@ function execute(
  * @param grid  The grid to modify
  * @param diffs The cell differences to apply to the grid
  */
-function apply(grid: grid_t, diffs: rules.cdiff[]) {
+function apply(grid: _grids.grid_t, diffs: _rules.cdiff[]) {
     for (const diff of diffs) {
         // Skip diffs that are out of bounds of the grid, just in case
         if (
@@ -117,7 +118,7 @@ function apply(grid: grid_t, diffs: rules.cdiff[]) {
  * @returns     A unique key for the cell position in the grid, used for tracking reserved cells during rule execution
  */
 export function getReservationKey(
-    grid: grid_slice_t,
+    grid: _grids.grid_slice_t,
     x: number,
     y: number,
 ): number {
@@ -138,14 +139,14 @@ const sand = {
     r: 194,
     g: 178,
     b: 128,
-} satisfies cells.cell_t;
+} satisfies _cells.cell_t;
 
 const air = {
     type: "color",
     r: 0,
     g: 0,
     b: 0,
-} satisfies cells.cell_t;
+} satisfies _cells.cell_t;
 
 const ruled = {
     type: "spatial",
@@ -157,7 +158,7 @@ const ruled = {
         "@": sand,
         A: air,
     },
-} satisfies rules.rule_t;
+} satisfies _rules.rule_t;
 
 const ruler = {
     type: "spatial",
@@ -170,7 +171,7 @@ const ruler = {
         B: sand,
         A: air,
     },
-} satisfies rules.rule_t;
+} satisfies _rules.rule_t;
 
 const rulel = {
     type: "spatial",
@@ -183,7 +184,7 @@ const rulel = {
         B: sand,
         A: air,
     },
-} satisfies rules.rule_t;
+} satisfies _rules.rule_t;
 
 const rule = rules.compile({
     type: "sequence",
@@ -209,7 +210,7 @@ const rule = rules.compile({
 const cair = cells.compile(air);
 const csand = cells.compile(sand);
 
-const dat: grid_t["cells"] = Array.from({ length: 10 }, () =>
+const dat: _grids.grid_t["cells"] = Array.from({ length: 10 }, () =>
     Array.from({ length: 10 }, () => cair),
 );
 
@@ -231,7 +232,7 @@ const grid = {
                 : dat[y + y1][x + x1],
         index: (x1: number, y1: number) => (y + y1) * dat[0].length + (x + x1),
     }),
-} satisfies grid_t;
+} satisfies _grids.grid_t;
 
 let last = "";
 function print() {

@@ -7,15 +7,18 @@
 
 import * as rules from "../../rules.js";
 
+import * as _rules from "../../rule_types.js";
+import * as _grids from "../../grid_types.js";
+
 export type sequence_rule = {
     type: "sequence";
-    rules: rules.rule_t[];
+    rules: _rules.rule_t[];
 };
 
 export type sequence_compiled = {
     /** The compiled rules to run in sequence */
-    rules: rules.frule_t[];
-} & rules.base_rule;
+    rules: _rules.frule_t[];
+} & _rules.base_rule;
 
 function compile(rule: sequence_rule): sequence_compiled {
     // Trivial case: No child rules, return empty compiled rule
@@ -66,9 +69,9 @@ function exec(
     rule: sequence_compiled,
     x: number,
     y: number,
-    grid: Readonly<rules.grid_slice_t>,
+    grid: Readonly<_grids.grid_slice_t>,
     reserved: ReadonlySet<number>,
-): rules.cdiff[] | null {
+): _rules.cdiff[] | null {
     // Attempt to run each child rule in sequence
     main: for (const r of rule.rules) {
         // Check bounding box of child rule to see if it is valid to run
@@ -104,7 +107,7 @@ function exec(
 // +---------------+
 // | Register rule |
 // +---------------+
-declare module "../../types.js" {
+declare module "../../rule_types.js" {
     interface rule_registry {
         sequence: {
             user: sequence_rule;

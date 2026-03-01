@@ -5,8 +5,7 @@
  * @copyright 2026 PiCO
  */
 
-import { Cell, fcell_t, cell_t } from "./types.js";
-export { Cell, cell_t, fcell_t } from "./types.js";
+import { Cell, fcell_t, cell_t } from "./cell_types.js";
 
 /** Registry of all registered cell types for type validation */
 export interface registry {}
