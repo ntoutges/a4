@@ -37,9 +37,9 @@ function execute(
 
     // Precompute the bounds of the area to run the rule on based on the rule metadata and grid size, to
     // Ensure the rule is only run on areas where it is guaranteed to be valid and not go out of bounds of the grid
-    const minY = -metadata.minY;
+    const minY = metadata.minY;
     const maxY = grid.height - metadata.maxY;
-    const minX = -metadata.minX;
+    const minX = metadata.minX;
     const maxX = grid.width - metadata.maxX;
 
     // Keep track of all cell differences resulting from running the rule on the grid
@@ -49,7 +49,6 @@ function execute(
     // Store all cell differences resulting from running the rule on the grid
     const allDiffs: rules.cdiff[] = [];
 
-    console.log(minX, minY, maxX, maxY);
     yloop: for (let y = minY; y <= maxY; y++) {
         xloop: for (let x = minX; x <= maxX; x++) {
             const diffs = rules.execute(rule, x, y, grid, reserved);
@@ -132,6 +131,7 @@ export function getReservationKey(
 import "./cells/color/color.js";
 import "./rules/spatial/spatial.js";
 import "./rules/sequence/sequence.js";
+import "./rules/quantum/quantum.js";
 
 const sand = {
     type: "color",
@@ -172,9 +172,38 @@ const ruler = {
     },
 } satisfies rules.rule_t;
 
+const rulel = {
+    type: "spatial",
+    before: `A @
+             A B`,
+    after: `A A
+            @ B`,
+    scope: {
+        "@": sand,
+        B: sand,
+        A: air,
+    },
+} satisfies rules.rule_t;
+
 const rule = rules.compile({
     type: "sequence",
-    rules: [ruled, ruler],
+    rules: [
+        ruled,
+        {
+            type: "quantum",
+            weighted: true,
+            rules: [
+                {
+                    rule: rulel,
+                    weight: 1,
+                },
+                {
+                    rule: ruler,
+                    weight: 1,
+                },
+            ],
+        },
+    ],
 });
 
 const cair = cells.compile(air);
@@ -183,6 +212,11 @@ const csand = cells.compile(sand);
 const dat: grid_t["cells"] = Array.from({ length: 10 }, () =>
     Array.from({ length: 10 }, () => cair),
 );
+
+// const dat = [
+//     [cair, csand, cair],
+//     [cair, csand, cair],
+// ];
 
 const grid = {
     width: dat[0].length,

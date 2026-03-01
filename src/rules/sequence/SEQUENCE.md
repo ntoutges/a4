@@ -1,6 +1,6 @@
-# Sequence Rule
+# Quantum Rule
 
-Automota rule that executes a sequence of rules in order
+Automota rule that executes a set of rules in a random order
 
 ## Type Def
 
