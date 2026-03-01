@@ -9,6 +9,7 @@ import {
 
 // Import rules + cells
 import "./src/cells/color/color.js";
+import "./src/cells/not/not.js";
 import "./src/rules/spatial/spatial.js";
 import "./src/rules/sequence/sequence.js";
 import "./src/rules/quantum/quantum.js";
@@ -21,6 +22,11 @@ const sand = {
     b: 128,
 } satisfies cell_t;
 
+const nsand = {
+    type: "not",
+    cell: sand,
+} satisfies cell_t;
+
 const air = {
     type: "color",
     r: 0,
@@ -28,7 +34,6 @@ const air = {
     b: 0,
 } satisfies cell_t;
 
-const cair = compileCell(air);
 const csand = compileCell(sand);
 
 // Define rules
@@ -92,11 +97,45 @@ const rule = compileRule({
 });
 
 const myGrid = grid.fill(25, 25, air);
+myGrid.cells[3][Math.floor((myGrid.width - 1) / 2)] = compileCell({
+    type: "color",
+    r: 100,
+    g: 100,
+    b: 100,
+});
+myGrid.cells[3][Math.floor((myGrid.width - 1) / 2 - 1)] = compileCell({
+    type: "color",
+    r: 100,
+    g: 100,
+    b: 100,
+});
+myGrid.cells[3][Math.floor((myGrid.width - 1) / 2) + 1] = compileCell({
+    type: "color",
+    r: 100,
+    g: 100,
+    b: 100,
+});
+myGrid.cells[3][Math.floor((myGrid.width - 1) / 2) + 2] = compileCell({
+    type: "color",
+    r: 100,
+    g: 100,
+    b: 100,
+});
 
 let last = "";
 function print() {
     const str = myGrid.cells
-        .map((d) => d.map((c) => (c.data.value === 0 ? "  " : "##")).join(""))
+        .map((d) =>
+            d
+                .map((c) =>
+                    (c.data as any).value === 0
+                        ? "  "
+                        : (c.data as any).r === 100
+                          ? "//"
+                          : "##",
+                )
+                .join(""),
+        )
         .join("\n");
     if (str === last) return true;
 

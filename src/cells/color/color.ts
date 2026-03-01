@@ -20,7 +20,7 @@ export type color_compiled = {
     g: number;
     b: number;
     value: number;
-};
+} & _cells.base_cell;
 
 // Register rule
 function compile(cell: color_cell): color_compiled {
@@ -34,6 +34,9 @@ function compile(cell: color_cell): color_compiled {
         g,
         b,
         value,
+        metadata: {
+            generating: true,
+        },
     };
 }
 
@@ -50,7 +53,9 @@ function lt(a: color_compiled, b: color_compiled): boolean {
 }
 
 function matches(a: color_compiled, b: _cells.fcell_t): boolean {
-    return b.cell.type === "color" ? a.value === b.data.value : false;
+    return b.cell.type === "color"
+        ? a.value === (b.data as color_compiled).value
+        : false;
 }
 
 // Register type

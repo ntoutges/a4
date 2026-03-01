@@ -15,16 +15,23 @@ export type fcell_t = {
     };
 }[keyof cell_registry];
 
+export type base_cell = {
+    metadata: {
+        /** Whether this cell can be used for creating new states */
+        generating: boolean;
+    };
+};
+
 /**
  * Defines a single cell type in the cell grid
  * @template R  Runtime pre-compiled cell data
  * @template C  Compiled cell data
  */
-type DeterministicCell<R, C> = {
+type DeterministicCell<R, C extends base_cell> = {
     readonly type: string;
 
     /** Mark cell as deterministic */
-    quantum: false;
+    quantum?: false;
 
     /**
      * Compile a user-friendly cell for runtime use
@@ -66,22 +73,26 @@ type DeterministicCell<R, C> = {
 };
 
 /**
- * Define the execution function of a quantom cell
+ * Define a quantum cell type
+ * This is a cell that can be used for rule matching.
+ * If the `metadata.generating` option is true, the cell can also be used for generating new states with the `exec` function.
+ * Otherwise, teh `exec` function will throw an error if called
  * @template R  Runtime pre-compiled cell data
  * @template C  Compiled cell data
  * @template T  The transformed value of the cell, used for quantum cells.
  */
-type QuantumCell<R, C, T extends DeterministicCell<any, any>> = {
+type QuantumCell<R, C extends base_cell, T extends DeterministicCell<R, C>> = {
     /** Mark cell as quantum */
     quantum: true;
 
     /**
      * Extract a deterministic value from a quantum cell, used for rule execution
+     * @throws If the cell is not able to generate states, this function will throw an error if called
      * @param cell  The cell to extract the value from
      * @returns     The extracted value to be used for rule execution. Note that this _must_ be deterministic
      */
     exec(cell: C): T;
-} & DeterministicCell<R, C>;
+} & Omit<DeterministicCell<R, C>, "quantum">;
 
 /**
  * Defines a single cell type in the cell grid
@@ -89,6 +100,6 @@ type QuantumCell<R, C, T extends DeterministicCell<any, any>> = {
  * @template C  Compiled cell data
  * @template T  The transformed value of the cell, used for quantum cells.
  */
-export type Cell<R, C, T extends DeterministicCell<R, C>> =
+export type Cell<R, C extends base_cell, T extends DeterministicCell<R, C>> =
     | DeterministicCell<R, C>
     | QuantumCell<R, C, T>;

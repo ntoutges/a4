@@ -30,7 +30,9 @@ export function register(cell: Cell<any, any, any>): void {
  * @param b
  */
 export function equals(a: Readonly<fcell_t>, b: Readonly<fcell_t>): boolean {
-    return a.cell.type === b.cell.type ? a.cell.eq(a.data, b.data) : false;
+    return a.cell.type === b.cell.type
+        ? a.cell.eq(a.data as any, b.data as any)
+        : false;
 }
 
 /**
@@ -39,7 +41,9 @@ export function equals(a: Readonly<fcell_t>, b: Readonly<fcell_t>): boolean {
  * @param b
  */
 export function gt(a: Readonly<fcell_t>, b: Readonly<fcell_t>): boolean {
-    return a.cell.type === b.cell.type ? a.cell.gt(a.data, b.data) : false;
+    return a.cell.type === b.cell.type
+        ? a.cell.gt(a.data as any, b.data as any)
+        : false;
 }
 
 /**
@@ -48,7 +52,9 @@ export function gt(a: Readonly<fcell_t>, b: Readonly<fcell_t>): boolean {
  * @param b
  */
 export function lt(a: Readonly<fcell_t>, b: Readonly<fcell_t>): boolean {
-    return a.cell.type === b.cell.type ? a.cell.lt(a.data, b.data) : false;
+    return a.cell.type === b.cell.type
+        ? a.cell.lt(a.data as any, b.data as any)
+        : false;
 }
 
 /**
@@ -57,7 +63,7 @@ export function lt(a: Readonly<fcell_t>, b: Readonly<fcell_t>): boolean {
  * @param b
  */
 export function matches(a: Readonly<fcell_t>, b: Readonly<fcell_t>): boolean {
-    return a.cell.type === b.cell.type ? a.cell.matches(a.data, b) : false;
+    return a.cell.matches(a.data as any, b);
 }
 
 /**
@@ -90,5 +96,5 @@ export function isQuantum(cell: Readonly<cell_t>): boolean {
         throw new Error(`Cell with type ${cell.type} is not registered`);
     }
 
-    return cell_data.quantum;
+    return cell_data.quantum ?? false;
 }

@@ -63,6 +63,12 @@ type spatial_compiled = {
             /** The id of the dynamic cell difference */
             id: number;
         }[];
+
+        /**
+         * Quantum cells that must be applied to the grid
+         * Stored in the format of (tokenId) => (cell)
+         */
+        qcells: Record<number, _cells.fcell_t>;
     };
 } & _rules.base_rule;
 
@@ -167,13 +173,18 @@ function compile(rule: spatial_rule): spatial_compiled {
     // Differentiate between cdiffs and ddiffs
     const cdiffs: spatial_compiled["diffs"]["cdiffs"] = [];
     const ddiffs: spatial_compiled["diffs"]["ddiffs"] = [];
+    const qcells: spatial_compiled["diffs"]["qcells"] = {};
 
     for (const [from, changes] of diffs) {
         for (const { to, x, y } of changes) {
-            if (!beforeTokens.has(to)) continue; // Unused token; Skip!
+            if (!beforeTokens.has(to) && !Object.hasOwn(rule.scope, to))
+                continue; // Unused token; Skip!
+
+            const resolved = !freeSet.has(to);
+            const quantum = cells.isQuantum(rule.scope[to]);
 
             // Can only be cdiff if token is both resolved and deterministic
-            if (!freeSet.has(to) && !cells.isQuantum(rule.scope[to])) {
+            if (resolved && !quantum) {
                 // Compile cell if required
                 if (!scopeCells.has(to))
                     scopeCells.set(to, cells.compile(rule.scope[to]));
@@ -186,9 +197,30 @@ function compile(rule: spatial_rule): spatial_compiled {
                 continue;
             }
 
+            const tokenId = tokenIds.get(to)!;
+            if (quantum) {
+                // Compile cell if required
+                if (!scopeCells.has(to))
+                    scopeCells.set(to, cells.compile(rule.scope[to]));
+
+                // Attempt to add cell to qcells
+                if (!Object.hasOwn(qcells, tokenId)) {
+                    const qcell = scopeCells.get(to)!;
+                    qcells[tokenId] = qcell;
+
+                    // Check if cell is generating
+                    // If not: throw error, as non-generating quantum cells cannot be used to generate states
+                    if (!qcell.data.metadata.generating) {
+                        throw new Error(
+                            `Non-generating quantum cell ${qcell.cell.type} [${to}] cannot be used to generate states`,
+                        );
+                    }
+                }
+            }
+
             // Dynamic cell difference
             ddiffs.push({
-                id: tokenIds.get(to)!,
+                id: tokenId,
                 x,
                 y,
             });
@@ -219,6 +251,7 @@ function compile(rule: spatial_rule): spatial_compiled {
         diffs: {
             cdiffs,
             ddiffs,
+            qcells,
         },
         metadata: {
             minX: -originX,
