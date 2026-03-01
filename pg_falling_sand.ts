@@ -136,7 +136,7 @@ myGrid.cells[3][Math.floor((myGrid.width - 1) / 2) + 2] = compileCell({
 });
 
 let last = "";
-function print() {
+function print(period: number) {
     const str = myGrid.cells
         .map((d) =>
             d
@@ -154,18 +154,19 @@ function print() {
         .join("\n");
     if (str === last) return true;
 
-    console.log(str);
-    console.log("----------------");
+    console.log(
+        `---------------- ${period.toFixed(2)}ms ----------------\n${str}`,
+    );
 
     last = str;
     return false;
 }
 
-print();
+print(0);
 const interval = setInterval(() => {
-    console.time();
+    const start = performance.now();
     step(myGrid, rule);
-    console.timeEnd();
+    const end = performance.now();
 
     if (
         // @ts-ignore
@@ -178,5 +179,5 @@ const interval = setInterval(() => {
             csand.cell.exec(csand.data);
     }
 
-    if (print()) clearInterval(interval);
+    if (print(end - start)) clearInterval(interval);
 }, 100);

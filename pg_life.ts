@@ -92,7 +92,7 @@ myGrid.cells[3][2] = compileCell(alive);
 myGrid.cells[3][3] = compileCell(alive);
 
 let last = "";
-function print() {
+function print(period: number) {
     const str = myGrid.cells
         .map((d) =>
             d
@@ -110,18 +110,19 @@ function print() {
         .join("\n");
     if (str === last) return true;
 
-    console.log(str);
-    console.log("----------------");
+    console.log(
+        `---------------- ${period.toFixed(2)}ms ----------------\n${str}`,
+    );
 
     last = str;
     return false;
 }
 
-print();
+print(0);
 const interval = setInterval(() => {
-    console.time();
+    const start = performance.now();
     step(myGrid, rule);
-    console.timeEnd();
+    const end = performance.now();
 
-    if (print()) clearInterval(interval);
+    if (print(end - start)) clearInterval(interval);
 }, 100);
