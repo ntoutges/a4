@@ -197,5 +197,14 @@ const interval = setInterval(() => {
             csand.cell.exec(csand.data);
     }
 
+    // @ts-ignore
+    if (Math.random() < 0.1) {
+        myGrid.write(
+            Math.floor((myGrid.width - 1) / 2),
+            myGrid.height - 1,
+            compileCell(air),
+        );
+    }
+
     if (print(end - start)) clearInterval(interval);
 }, 100);

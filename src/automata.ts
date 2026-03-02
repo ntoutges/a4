@@ -98,19 +98,6 @@ function execute(
  */
 function apply(grid: _grids.grid_t, diffs: _rules.cdiff[]) {
     for (const diff of diffs) {
-        // Skip diffs that are out of bounds of the grid, just in case
-        if (
-            diff.x < 0 ||
-            diff.x >= grid.width ||
-            diff.y < 0 ||
-            diff.y >= grid.height
-        ) {
-            console.warn(
-                `Skipping diff at (${diff.x}, ${diff.y}) as it is out of bounds of the grid`,
-            );
-            continue;
-        }
-
         grid.write(diff.x, diff.y, diff.to);
     }
 }
