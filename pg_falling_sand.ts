@@ -5,6 +5,7 @@ import {
     grid,
     step,
     rule_t,
+    fcell_t,
 } from "./src/module.js";
 
 // Import rules + cells
@@ -110,34 +111,51 @@ const rule = compileRule({
 });
 
 const myGrid = grid.fill(25, 25, air);
-myGrid.cells[3][Math.floor((myGrid.width - 1) / 2)] = compileCell({
-    type: "color",
-    r: 100,
-    g: 100,
-    b: 100,
-});
-myGrid.cells[3][Math.floor((myGrid.width - 1) / 2 - 1)] = compileCell({
-    type: "color",
-    r: 100,
-    g: 100,
-    b: 100,
-});
-myGrid.cells[3][Math.floor((myGrid.width - 1) / 2) + 1] = compileCell({
-    type: "color",
-    r: 100,
-    g: 100,
-    b: 100,
-});
-myGrid.cells[3][Math.floor((myGrid.width - 1) / 2) + 2] = compileCell({
-    type: "color",
-    r: 100,
-    g: 100,
-    b: 100,
-});
+myGrid.write(
+    (myGrid.width - 1) / 2 - 1,
+    3,
+    compileCell({
+        type: "color",
+        r: 100,
+        g: 100,
+        b: 100,
+    }),
+);
+myGrid.write(
+    (myGrid.width - 1) / 2,
+    3,
+    compileCell({
+        type: "color",
+        r: 100,
+        g: 100,
+        b: 100,
+    }),
+);
+myGrid.write(
+    (myGrid.width - 1) / 2 + 1,
+    3,
+    compileCell({
+        type: "color",
+        r: 100,
+        g: 100,
+        b: 100,
+    }),
+);
+myGrid.write(
+    (myGrid.width - 1) / 2 + 2,
+    3,
+    compileCell({
+        type: "color",
+        r: 100,
+        g: 100,
+        b: 100,
+    }),
+);
 
 let last = "";
 function print(period: number) {
-    const str = myGrid.cells
+    // @ts-ignore
+    const str = (myGrid.cells as fcell_t[][])
         .map((d) =>
             d
                 .map((c) =>

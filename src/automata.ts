@@ -6,9 +6,9 @@
  */
 
 import * as rules from "./rules.js";
+import * as _grids from "./grid_types.js";
 import * as cells from "./cells.js";
 import * as grid from "./grid.js";
-import * as _grids from "./grid_types.js";
 import * as _rules from "./rule_types.js";
 import * as _cells from "./cell_types.js";
 
@@ -39,10 +39,14 @@ function execute(
 
     // Precompute the bounds of the area to run the rule on based on the rule metadata and grid size, to
     // Ensure the rule is only run on areas where it is guaranteed to be valid and not go out of bounds of the grid
-    const minY = metadata.minY;
-    const maxY = grid.height - metadata.maxY;
-    const minX = metadata.minX;
-    const maxX = grid.width - metadata.maxX;
+    const minY = grid.wrap.y ? 0 : metadata.minY - grid.padding.n;
+    const maxY = grid.wrap.y
+        ? grid.height - 1
+        : grid.height - metadata.maxY + grid.padding.s;
+    const minX = grid.wrap.x ? 0 : metadata.minX - grid.padding.w;
+    const maxX = grid.wrap.x
+        ? grid.width - 1
+        : grid.width - metadata.maxX + grid.padding.e;
 
     // Keep track of all cell differences resulting from running the rule on the grid
     // Prevents 1 cell from being modified multiple times in the same step
@@ -107,7 +111,7 @@ function apply(grid: _grids.grid_t, diffs: _rules.cdiff[]) {
             continue;
         }
 
-        grid.cells[diff.y][diff.x] = diff.to;
+        grid.write(diff.x, diff.y, diff.to);
     }
 }
 

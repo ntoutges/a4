@@ -77,10 +77,10 @@ function exec(
         // Check bounding box of child rule to see if it is valid to run
         const metadata = r.data.metadata;
         if (
-            x + metadata.minX < 0 ||
-            x + metadata.maxX > grid.width ||
-            y + metadata.minY < 0 ||
-            y + metadata.maxY > grid.height
+            (!grid.wrap.x &&
+                (x + metadata.minX < 0 || x + metadata.maxX > grid.width)) ||
+            (!grid.wrap.y &&
+                (y + metadata.minY < 0 || y + metadata.maxY > grid.height))
         ) {
             continue;
         }

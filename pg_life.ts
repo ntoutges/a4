@@ -5,6 +5,7 @@ import {
     grid,
     step,
     rule_t,
+    fcell_t,
 } from "./src/module.js";
 
 // Import rules + cells
@@ -80,20 +81,19 @@ const rule = compileRule({
     rules: [ruleb, ruled1, ruled2],
 });
 
-const myGrid = grid.fill(25, 25, dead);
-// myGrid.cells[2][1] = compileCell(alive);
-// myGrid.cells[2][2] = compileCell(alive);
-// myGrid.cells[2][3] = compileCell(alive);
+const myGrid = grid.fill(5, 5, dead, { wrapX: true, wrapY: true });
 
-myGrid.cells[1][2] = compileCell(alive);
-myGrid.cells[2][3] = compileCell(alive);
-myGrid.cells[3][1] = compileCell(alive);
-myGrid.cells[3][2] = compileCell(alive);
-myGrid.cells[3][3] = compileCell(alive);
+// Glider
+myGrid.write(1, 0, compileCell(alive));
+myGrid.write(2, 1, compileCell(alive));
+myGrid.write(0, 2, compileCell(alive));
+myGrid.write(1, 2, compileCell(alive));
+myGrid.write(2, 2, compileCell(alive));
 
 let last = "";
 function print(period: number) {
-    const str = myGrid.cells
+    // @ts-ignore
+    const str = (myGrid.cells as fcell_t[][])
         .map((d) =>
             d
                 .map((c) =>

@@ -164,10 +164,10 @@ function exec(
         // If invalid: try again
         const metadata = r.rule.data.metadata;
         if (
-            x + metadata.minX < 0 ||
-            x + metadata.maxX > grid.width ||
-            y + metadata.minY < 0 ||
-            y + metadata.maxY > grid.height
+            (!grid.wrap.x &&
+                (x + metadata.minX < 0 || x + metadata.maxX > grid.width)) ||
+            (!grid.wrap.y &&
+                (y + metadata.minY < 0 || y + metadata.maxY > grid.height))
         ) {
             blacklist.add(ruleI);
             blacklistWeight += r.weight;
