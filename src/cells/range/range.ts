@@ -42,6 +42,13 @@ function compile(cell: range_cell): range_compiled {
         max = (max as any).max;
     }
 
+    // Ensure min/max have the same type
+    if (min.type !== max.type) {
+        throw new Error(
+            `Range cell min and max must have the same type, got ${min.type} and ${max.type}`,
+        );
+    }
+
     let mode: range_mode = range_mode.FALLBACK;
 
     // Check for special cases with special handling
@@ -118,6 +125,7 @@ function matches_color(a: range_compiled, b: _cells.fcell_t): boolean {
  */
 function matches_fallback(a: range_compiled, b: _cells.fcell_t): boolean {
     return (
+        a.min.cell.type === b.cell.type &&
         (a.min.cell.lt(a.min.data as any, b as any) ||
             a.min.cell.eq(a.min.data as any, b as any)) &&
         (a.max.cell.gt(a.max.data as any, b as any) ||
