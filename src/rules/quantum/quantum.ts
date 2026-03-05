@@ -9,6 +9,7 @@ import * as rules from "../../rules.js";
 
 import * as _rules from "../../rule_types.js";
 import * as _grids from "../../grid_types.js";
+import * as _diffs from "../../diff_types.js";
 
 type quantum_rule = {
     type: "quantum";
@@ -32,6 +33,12 @@ export type quantum_compiled = {
 
         /** The weight of this rule; Garunteed to be > 0 */
         weight: number;
+
+        /**
+         * The cached bbox of this child rule
+         * Valid only after `preexec` is called
+         */
+        cbbox: _rules.cbbox_t;
     }[];
 
     /** The total summed weight of all rules */
@@ -41,18 +48,24 @@ export type quantum_compiled = {
     max: number;
 } & _rules.base_rule;
 
-function compile(rule: quantum_rule): quantum_compiled {
+function compile(
+    rule_data: _rules.Rule<quantum_rule, quantum_compiled>,
+    rule: quantum_rule,
+): _rules.frule_t {
     // Degenerate case: No child rules, return empty compiled rule
     if (rule.rules.length === 0) {
         return {
-            rules: [],
-            max: 0,
-            weight: 0,
-            metadata: {
-                minX: 0,
-                minY: 0,
-                maxX: 0,
-                maxY: 0,
+            rule: rule_data,
+            data: {
+                rules: [],
+                max: 0,
+                weight: 0,
+                metadata: {
+                    minX: 0,
+                    minY: 0,
+                    maxX: 0,
+                    maxY: 0,
+                },
             },
         };
     }
@@ -66,6 +79,7 @@ function compile(rule: quantum_rule): quantum_compiled {
             compiledRules.push({
                 rule: rules.compile(r),
                 weight: 1,
+                cbbox: null!,
             });
         }
 
@@ -84,10 +98,16 @@ function compile(rule: quantum_rule): quantum_compiled {
             compiledRules.push({
                 rule: rules.compile(rw.rule),
                 weight: rw.weight,
+                cbbox: null!,
             });
 
             totalWeight += rw.weight;
         }
+    }
+
+    // Trivial case: Exactly one child rule; Return just that rule
+    if (compiledRules.length === 1) {
+        return compiledRules[0].rule;
     }
 
     // Compute the bounding box that encompasses all child rules
@@ -111,15 +131,42 @@ function compile(rule: quantum_rule): quantum_compiled {
     if (max < 0) max += compiledRules.length; // Support negative max values, which indicate last `|max|` rules
 
     return {
-        rules: compiledRules,
-        max: max,
-        weight: totalWeight,
-        metadata: {
-            minX: minX,
-            minY: minY,
-            maxX: maxX,
-            maxY: maxY,
+        rule: rule_data,
+        data: {
+            rules: compiledRules,
+            max: max,
+            weight: totalWeight,
+            metadata: {
+                minX: minX,
+                minY: minY,
+                maxX: maxX,
+                maxY: maxY,
+            },
         },
+    };
+}
+
+function preexec(
+    rule: quantum_compiled,
+    grid: Readonly<_grids.grid_slice_t>,
+    diffs: Required<_diffs.diffs>,
+): _rules.preexec_t {
+    const bboxes: _rules.bbox_t[] = [];
+
+    // Run preexec on all children
+    for (const child of rule.rules) {
+        const res = rules.preexec(child.rule, grid, diffs);
+
+        // Stash bbox cache in child entry
+        child.cbbox = rules.cache_bbox(res.bbox, grid);
+
+        // Stash all bboxes
+        bboxes.push(res.bbox);
+    }
+
+    return {
+        // Merge all child bounding boxes
+        bbox: rules.merge_bbox(bboxes),
     };
 }
 
@@ -129,10 +176,12 @@ function exec(
     y: number,
     grid: Readonly<_grids.grid_slice_t>,
     reserved: ReadonlySet<number>,
-): _rules.cdiff[] | null {
+): _diffs.diffs | null {
     // Variables used to prevent repeats
     const blacklist: Set<number> = new Set(); // Set of cell indices that have already been tried
     let blacklistWeight = 0; // The total weight of all rules in the blacklist
+
+    const index = grid.index(x, y);
 
     // Loop up-to `rule.max` times
     for (let i = 0; i < rule.max; i++) {
@@ -160,7 +209,25 @@ function exec(
         // Attempt to run child rule
         const r = rule.rules[ruleI];
 
-        // Check bounding box of rule
+        // Check position against cached bbox
+        // If invalid: try again
+        if (
+            !(
+                r.cbbox.all ||
+                r.cbbox.points.has(index) ||
+                (x >= r.cbbox.rect.minX &&
+                    x <= r.cbbox.rect.maxX &&
+                    y >= r.cbbox.rect.minY &&
+                    y <= r.cbbox.rect.maxY)
+            )
+        ) {
+            // Outside declared bbox area; Ignore!
+            blacklist.add(ruleI);
+            blacklistWeight += r.weight;
+            continue;
+        }
+
+        // Check overall bounding box of rule
         // If invalid: try again
         const metadata = r.rule.data.metadata;
         if (
@@ -184,7 +251,7 @@ function exec(
             valid = false;
         } else {
             // Rule ran successfully, check if any diffs step on `reserved` cells
-            for (const diff of diffs) {
+            for (const diff of diffs.cdiffs) {
                 const cellIndex = grid.index(x + diff.x, y + diff.y);
 
                 // Rule steps on a reserved cell, invalid
@@ -224,5 +291,6 @@ declare module "../../rule_types.js" {
 rules.register({
     type: "quantum",
     compile,
+    preexec,
     exec,
 });

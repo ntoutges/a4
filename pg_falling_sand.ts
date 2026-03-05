@@ -110,7 +110,12 @@ const rule = compileRule({
     ],
 });
 
-const myGrid = grid.fill(25, 25, air);
+// @ts-ignore
+const height = process.stdout.rows - 2;
+// @ts-ignore
+const width = process.stdout.columns;
+
+const myGrid = grid.fill(Math.floor(width / 2), height, air);
 myGrid.write(
     (myGrid.width - 1) / 2 - 1,
     3,
@@ -172,9 +177,11 @@ function print(period: number) {
         .join("\n");
     if (str === last) return true;
 
-    console.log(
-        `---------------- ${period.toFixed(2)}ms ----------------\n${str}`,
-    );
+    let header = ` ${period.toFixed(2)}ms `;
+    while (header.length + 2 < width) {
+        header = `-${header}-`;
+    }
+    console.log(`${header}\n${str}`);
 
     last = str;
     return false;
@@ -188,13 +195,14 @@ const interval = setInterval(() => {
 
     if (
         // @ts-ignore
-        myGrid.cells[0][Math.floor((myGrid.cells[0].length - 1) / 2)].data.r ===
-        0
+        myGrid.cell(Math.floor((myGrid.width - 1) / 2), 0).data.r === 0
     ) {
-        // @ts-ignore
-        myGrid.cells[0][Math.floor((myGrid.cells[0].length - 1) / 2)] =
+        myGrid.write(
+            Math.floor((myGrid.width - 1) / 2),
+            0,
             // @ts-ignore
-            csand.cell.exec(csand.data);
+            csand.cell.exec(csand.data),
+        );
     }
 
     // @ts-ignore

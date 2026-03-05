@@ -81,7 +81,15 @@ const rule = compileRule({
     rules: [ruleb, ruled1, ruled2],
 });
 
-const myGrid = grid.fill(5, 5, dead, { wrapX: true, wrapY: true });
+// @ts-ignore
+const height = process.stdout.rows - 2;
+// @ts-ignore
+const width = process.stdout.columns;
+
+const myGrid = grid.fill(Math.floor(width / 2), height, dead, {
+    wrapX: true,
+    wrapY: true,
+});
 
 // Glider
 myGrid.write(1, 0, compileCell(alive));
@@ -110,9 +118,11 @@ function print(period: number) {
         .join("\n");
     if (str === last) return true;
 
-    console.log(
-        `---------------- ${period.toFixed(2)}ms ----------------\n${str}`,
-    );
+    let header = ` ${period.toFixed(2)}ms `;
+    while (header.length + 2 < width) {
+        header = `-${header}-`;
+    }
+    console.log(`${header}\n${str}`);
 
     last = str;
     return false;

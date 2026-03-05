@@ -11,6 +11,7 @@ import * as cells from "../../cells.js";
 import * as _rules from "../../rule_types.js";
 import * as _cells from "../../cell_types.js";
 import * as _grids from "../../grid_types.js";
+import * as _diffs from "../../diff_types.js";
 
 export type surround_rule = {
     type: "surround";
@@ -74,7 +75,7 @@ export type surround_compiled = {
               mode: after_mode.CONSTANT;
 
               /** The cell to change to */
-              diff: _rules.cdiff;
+              diff: _diffs.cdiff;
           }
         | {
               mode: after_mode.RDYNAMIC;
@@ -99,7 +100,10 @@ export type surround_compiled = {
           };
 } & _rules.base_rule;
 
-function compile(rule: surround_rule): surround_compiled {
+function compile(
+    rule_data: _rules.Rule<surround_rule, surround_compiled>,
+    rule: surround_rule,
+): _rules.frule_t {
     // Determine thresholding
     const min = rule.min ?? -Infinity;
     const max = rule.max ?? Infinity;
@@ -262,16 +266,19 @@ function compile(rule: surround_rule): surround_compiled {
     }
 
     return {
-        mask: mask,
-        min: min,
-        max: max,
-        req: req,
-        after: after,
-        metadata: {
-            minX: -originX,
-            maxX: pmask[0].length - originX,
-            minY: -originY,
-            maxY: pmask.length - originY,
+        rule: rule_data,
+        data: {
+            mask: mask,
+            min: min,
+            max: max,
+            req: req,
+            after: after,
+            metadata: {
+                minX: -originX,
+                maxX: pmask[0].length - originX,
+                minY: -originY,
+                maxY: pmask.length - originY,
+            },
         },
     };
 }
@@ -284,13 +291,27 @@ function ptokenize(picture: string): string[][] {
     return picture.split("\n").map((line) => line.trim().split(/\s+/));
 }
 
+function preexec(
+    rule: surround_compiled,
+    grid: Readonly<_grids.grid_slice_t>,
+    diffs: Required<_diffs.diffs>,
+): _rules.preexec_t {
+    // @TODO Be smarter about bbox
+    // IE: Only execute on diffs which resulted in a value matching the focused cell
+    return {
+        bbox: {
+            mode: _rules.bbox_modes.ALL,
+        },
+    };
+}
+
 function exec(
     rule: surround_compiled,
     x: number,
     y: number,
     grid: Readonly<_grids.grid_slice_t>,
     reserved: ReadonlySet<number>,
-): _rules.cdiff[] | null {
+): _diffs.diffs | null {
     // Check required cell
     if (
         rule.req !== null &&
@@ -322,44 +343,45 @@ function exec(
     // Rule failed to match within threshold; Skip!
     if (acc < rule.min || acc > rule.max) return null;
 
+    let cdiff: _diffs.cdiff;
+
     // Apply changes based on `after` mode
     switch (rule.after.mode) {
         case after_mode.CONSTANT:
-            return [rule.after.diff];
+            cdiff = rule.after.diff;
+            break;
         case after_mode.QUANTUM:
-            return [
-                {
-                    x: 0,
-                    y: 0,
-                    to: (
-                        rule.after.cell.cell as _cells.QuantumCell<
-                            any,
-                            any,
-                            any
-                        >
-                    ).exec(rule.after.cell.data),
-                },
-            ];
+            cdiff = {
+                x: 0,
+                y: 0,
+                to: (
+                    rule.after.cell.cell as _cells.QuantumCell<any, any, any>
+                ).exec(rule.after.cell.data),
+            };
+            break;
         case after_mode.RDYNAMIC:
-            return [
-                {
-                    x: 0,
-                    y: 0,
-                    to: qcells.get(rule.after.id)!,
-                },
-            ];
+            cdiff = {
+                x: 0,
+                y: 0,
+                to: qcells.get(rule.after.id)!,
+            };
+            break;
         case after_mode.FDYNAMIC:
-            return [
-                {
-                    x: 0,
-                    y: 0,
-                    to: grid.cell(x + rule.after.x, y + rule.after.y),
-                },
-            ];
+            cdiff = {
+                x: 0,
+                y: 0,
+                to: grid.cell(x + rule.after.x, y + rule.after.y),
+            };
+            break;
+
+        default:
+            // How did you get here!?
+            return null;
     }
 
-    // How did you get here!?
-    return null;
+    return {
+        cdiffs: [cdiff],
+    };
 }
 
 // +---------------+
@@ -377,5 +399,6 @@ declare module "../../rule_types.js" {
 rules.register({
     type: "surround",
     compile,
+    preexec,
     exec,
 });

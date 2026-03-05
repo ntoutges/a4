@@ -11,6 +11,7 @@ import * as cells from "../../cells.js";
 import * as _rules from "../../rule_types.js";
 import * as _cells from "../../cell_types.js";
 import * as _grids from "../../grid_types.js";
+import * as _diffs from "../../diff_types.js";
 
 export type spatial_rule = {
     type: "spatial";
@@ -35,6 +36,9 @@ type spatial_compiled = {
         cell: _cells.fcell_t;
     }[];
 
+    /** Store index of origin cell in `req` list. If not in list: `-1` */
+    originReq: number;
+
     /** Non-required tokens whose cell types must be gathered */
     frees: {
         /** The x-coordinate of this compiled spatial rule component */
@@ -50,7 +54,7 @@ type spatial_compiled = {
     /** The cell differences that must be applied to the grid */
     diffs: {
         /** Constant cell differences that must be applied to the grid */
-        cdiffs: _rules.cdiff[];
+        cdiffs: _diffs.cdiff[];
 
         /** Dynamic cell differences that must be applied to the grid */
         ddiffs: {
@@ -72,7 +76,10 @@ type spatial_compiled = {
     };
 } & _rules.base_rule;
 
-function compile(rule: spatial_rule): spatial_compiled {
+function compile(
+    rule_data: _rules.Rule<spatial_rule, spatial_compiled>,
+    rule: spatial_rule,
+): _rules.frule_t {
     const before = ptokenize(rule.before);
     const after = ptokenize(rule.after);
 
@@ -132,6 +139,7 @@ function compile(rule: spatial_rule): spatial_compiled {
     const freeSet = new Set<string>();
     let originX = 0;
     let originY = 0;
+    let originI = -1;
     for (let y in before) {
         for (let x in before[y]) {
             const token = before[y][x];
@@ -149,6 +157,9 @@ function compile(rule: spatial_rule): spatial_compiled {
                     scopeCells.set(token, cells.compile(rule.scope[token]));
 
                 const c = scopeCells.get(token)!;
+
+                // Track location of origin requirement
+                if (token === "@") originI = reqs.length;
 
                 reqs.push({
                     id: tokenIds.get(token)!,
@@ -252,18 +263,22 @@ function compile(rule: spatial_rule): spatial_compiled {
     }
 
     return {
-        reqs,
-        frees,
-        diffs: {
-            cdiffs,
-            ddiffs,
-            qcells,
-        },
-        metadata: {
-            minX: -originX,
-            minY: -originY,
-            maxX: before[0].length - originX,
-            maxY: before.length - originY,
+        rule: rule_data,
+        data: {
+            reqs,
+            originReq: originI,
+            frees,
+            diffs: {
+                cdiffs,
+                ddiffs,
+                qcells,
+            },
+            metadata: {
+                minX: -originX,
+                minY: -originY,
+                maxX: before[0].length - originX,
+                maxY: before.length - originY,
+            },
         },
     };
 }
@@ -276,13 +291,58 @@ function ptokenize(picture: string): string[][] {
     return picture.split("\n").map((line) => line.trim().split(/\s+/));
 }
 
+function preexec(
+    rule: spatial_compiled,
+    grid: Readonly<_grids.grid_slice_t>,
+    diffs: Required<_diffs.diffs>,
+): _rules.preexec_t {
+    // @TODO Be smarter about bbox
+    // IE: Only execute on diffs which resulted in a value matching the focused cell
+    return {
+        bbox: {
+            mode: _rules.bbox_modes.ALL,
+        },
+    };
+
+    // OPTIMIZATION: ONLY CHECK DIFFS
+    // PROBLEM: IGNORES NON-DIFF MATCHING CELLS...
+
+    // Central point doesn't impose restriction
+    // Must check all points...
+    // if (rule.originReq === -1) {
+    //     return {
+    //         bbox: {
+    //             mode: _rules.bbox_modes.ALL,
+    //         },
+    //     };
+    // }
+
+    // const origin = rule.reqs[rule.originReq];
+    // const points: { x: number; y: number }[] = [];
+
+    // // Return only locations of diffs that matche central cell
+    // for (const diff of diffs.cdiffs) {
+    //     if (origin.cell.cell.matches(origin.cell.data as any, diff.to)) {
+    //         // Reuse `diff` object to avoid replicated work
+    //         points.push(diff);
+    //     }
+    // }
+
+    // return {
+    //     bbox: {
+    //         mode: _rules.bbox_modes.POINTS,
+    //         points,
+    //     },
+    // };
+}
+
 function exec(
     rule: spatial_compiled,
     x: number,
     y: number,
     grid: Readonly<_grids.grid_slice_t>,
     reserved: ReadonlySet<number>,
-): _rules.cdiff[] | null {
+): _diffs.diffs | null {
     const qcells = new Map<number, _cells.fcell_t>();
 
     // Check if all required tokens match
@@ -316,12 +376,14 @@ function exec(
     }
 
     // Generate cell differences
-    const diffs: _rules.cdiff[] = [...rule.diffs.cdiffs];
+    const diffs: _diffs.diffs = {
+        cdiffs: [...rule.diffs.cdiffs],
+    };
     for (const ddiff of rule.diffs.ddiffs) {
         const targetCell = qcells.get(ddiff.id);
         if (!targetCell) continue; // Free token not found, skip!
 
-        diffs.push({
+        diffs.cdiffs.push({
             x: ddiff.x,
             y: ddiff.y,
             to: targetCell,
@@ -346,5 +408,6 @@ declare module "../../rule_types.js" {
 rules.register({
     type: "spatial",
     compile,
+    preexec,
     exec,
 });

@@ -7,10 +7,9 @@
 
 import * as rules from "./rules.js";
 import * as _grids from "./grid_types.js";
-import * as cells from "./cells.js";
-import * as grid from "./grid.js";
 import * as _rules from "./rule_types.js";
 import * as _cells from "./cell_types.js";
+import * as _diffs from "./diff_types.js";
 
 /**
  * Executes a single step of the automata system, applying the given rule to the given grid and
@@ -19,7 +18,13 @@ import * as _cells from "./cell_types.js";
  * @param rule  The rule to apply to the grid
  */
 export function step(grid: _grids.grid_t, rule: _rules.frule_t): void {
-    const diffs = execute(grid.slice(0, 0, grid.width, grid.height), rule);
+    const diffs = execute(
+        grid.slice(0, 0, grid.width, grid.height),
+        grid.diffs(),
+        rule,
+    );
+
+    grid.cldiff(); // Clear old diffs for this tick
     apply(grid, diffs);
 }
 
@@ -32,58 +37,73 @@ export function step(grid: _grids.grid_t, rule: _rules.frule_t): void {
  */
 function execute(
     grid: Readonly<_grids.grid_slice_t>,
+    diffs: Required<_diffs.diffs>,
     rule: _rules.frule_t,
-): _rules.cdiff[] {
+): Required<_diffs.diffs> {
     // Metadata describing how the rule is executed
     const metadata = rule.data.metadata;
 
-    // Precompute the bounds of the area to run the rule on based on the rule metadata and grid size, to
-    // Ensure the rule is only run on areas where it is guaranteed to be valid and not go out of bounds of the grid
-    const minY = grid.wrap.y ? 0 : metadata.minY - grid.padding.n;
-    const maxY = grid.wrap.y
-        ? grid.height - 1
-        : grid.height - metadata.maxY + grid.padding.s;
-    const minX = grid.wrap.x ? 0 : metadata.minX - grid.padding.w;
-    const maxX = grid.wrap.x
-        ? grid.width - 1
-        : grid.width - metadata.maxX + grid.padding.e;
+    // Run preexec
+    const preexec = rules.preexec(rule, grid, diffs);
+
+    let minX: number;
+    let minY: number;
+    let maxX: number;
+    let maxY: number;
+
+    // Store all cell differences resulting from running the rule on the grid
+    const allDiffs: Required<_diffs.diffs> = {
+        cdiffs: [],
+        ddiffs: [],
+    };
 
     // Keep track of all cell differences resulting from running the rule on the grid
     // Prevents 1 cell from being modified multiple times in the same step
     const reserved: Set<number> = new Set();
 
-    // Store all cell differences resulting from running the rule on the grid
-    const allDiffs: _rules.cdiff[] = [];
+    // Run on all bounds
+    if (preexec.bbox.mode === _rules.bbox_modes.ALL) {
+        // Precompute the bounds of the area to run the rule on based on the rule metadata and grid size, to
+        // Ensure the rule is only run on areas where it is guaranteed to be valid and not go out of bounds of the grid
+        const minY = grid.wrap.y ? 0 : metadata.minY - grid.padding.n;
+        const maxY = grid.wrap.y
+            ? grid.height - 1
+            : grid.height - metadata.maxY + grid.padding.s;
+        const minX = grid.wrap.x ? 0 : metadata.minX - grid.padding.w;
+        const maxX = grid.wrap.x
+            ? grid.width - 1
+            : grid.width - metadata.maxX + grid.padding.e;
 
-    yloop: for (let y = minY; y <= maxY; y++) {
-        xloop: for (let x = minX; x <= maxX; x++) {
-            const diffs = rules.execute(rule, x, y, grid, reserved);
-            if (!diffs) continue; // Rule failed to execute at this location, skip
-
-            // Make copies of diff objects to avoid modifying the original diffs returned by the rule execution
-            for (const i in diffs) {
-                diffs[i] = { ...diffs[i] };
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                subexec(rule, x, y, grid, reserved, allDiffs);
             }
+        }
+    } else {
+        // Run through rectangular points
+        if (
+            preexec.bbox.mode === _rules.bbox_modes.RECT ||
+            preexec.bbox.mode === _rules.bbox_modes.HYBRID
+        ) {
+            const minX = preexec.bbox.minX;
+            const minY = preexec.bbox.minY;
+            const maxX = preexec.bbox.maxX;
+            const maxY = preexec.bbox.maxY;
 
-            // Check if any diffs step on `reserved` cells
-            // If so: the entire rule is invalid at this location, skip
-            check: for (const diff of diffs) {
-                // Update diff coordinates to be absolute rather than relative to the rule origin
-                diff.x += x;
-                diff.y += y;
-
-                const key = getReservationKey(grid, x + diff.x, y + diff.y);
-
-                // This diff steps on a reserved cell, skip
-                if (reserved.has(key)) continue xloop;
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    subexec(rule, x, y, grid, reserved, allDiffs);
+                }
             }
+        }
 
-            // Add all diffs to the result and mark their positions as reserved
-            // Note: At this point, all diff coordinates are absolute due to the previous `check` loop
-            for (const diff of diffs) {
-                const key = getReservationKey(grid, diff.x, diff.y);
-                reserved.add(key);
-                allDiffs.push(diff);
+        // Run through direct points
+        if (
+            preexec.bbox.mode === _rules.bbox_modes.POINTS ||
+            preexec.bbox.mode === _rules.bbox_modes.HYBRID
+        ) {
+            for (const { x, y } of preexec.bbox.points) {
+                subexec(rule, x, y, grid, reserved, allDiffs);
             }
         }
     }
@@ -92,14 +112,74 @@ function execute(
 }
 
 /**
+ * Execute some rule at a specific point, updating the diffs as required
+ * @param rule  The rule to run
+ * @param x     The position to run the rule at
+ * @param y     The position to run the rule at
+ * @param grid  The grid the rule is run on
+ * @param diffs     The diffs from previous cells, to modify
+ * @param reserved  The set of reserved (already-modified) cells
+ * @returns `true` this rule succeeded at running, `false` otherwise
+ */
+function subexec(
+    rule: _rules.frule_t,
+    x: number,
+    y: number,
+    grid: Readonly<_grids.grid_slice_t>,
+    reserved: Set<number>,
+    allDiffs: Required<_diffs.diffs>,
+): boolean {
+    const diffs = rules.execute(rule, x, y, grid, reserved);
+    if (!diffs) return false; // Rule failed to execute at this location, skip
+
+    const cdiffs = diffs.cdiffs;
+
+    /** @TODO Handle ddiffs */
+    if (diffs.ddiffs) throw new Error("Unhandled diff type!");
+
+    // Make copies of cdiff objects to avoid modifying the original diffs returned by the rule execution
+    for (const i in cdiffs) {
+        cdiffs[i] = { ...cdiffs[i] };
+    }
+
+    // Check if any diffs step on `reserved` cells
+    // If so: the entire rule is invalid at this location, skip
+    for (const cdiff of cdiffs) {
+        // Update diff coordinates to be absolute rather than relative to the rule origin
+        cdiff.x += x;
+        cdiff.y += y;
+
+        const key = getReservationKey(grid, x + cdiff.x, y + cdiff.y);
+
+        // This diff steps on a reserved cell, skip
+        if (reserved.has(key)) return false;
+    }
+
+    // Success! Apply all new diffs to allDiffs
+
+    // Add all cdiffs to tracked diffs
+    for (const cdiff of cdiffs) {
+        const key = getReservationKey(grid, cdiff.x, cdiff.y);
+        reserved.add(key);
+        allDiffs.cdiffs.push(cdiff);
+    }
+
+    return true;
+}
+
+/**
  * Apply a set of differences to a cell grid, modifying the grid in-place.
  * @param grid  The grid to modify
  * @param diffs The cell differences to apply to the grid
  */
-function apply(grid: _grids.grid_t, diffs: _rules.cdiff[]) {
-    for (const diff of diffs) {
-        grid.write(diff.x, diff.y, diff.to);
+function apply(grid: _grids.grid_t, diffs: Required<_diffs.diffs>) {
+    // Apply all cell diffs
+    for (const cdiff of diffs.cdiffs) {
+        grid.write(cdiff.x, cdiff.y, cdiff.to);
     }
+
+    // @TODO Handle DDIFFS
+    if (diffs.ddiffs.length) throw new Error("Unhandled diff type!");
 }
 
 /**

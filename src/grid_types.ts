@@ -1,4 +1,5 @@
 import * as cells from "./cell_types";
+import * as diffs from "./diff_types";
 
 export type grid_options_t = {
     // Whether to wrap around the x and y axes when accessing cells out of bounds, defaulting to false (no wrapping)
@@ -71,9 +72,23 @@ export interface grid_t {
      * @param cell  The cell value to write to the grid
      */
     write(x: number, y: number, cell: cells.fcell_t): void;
+
+    /**
+     * Get the differences since the last `cldiff` command
+     * @returns The internal diffs. Do _NOT_ attempt to modify these values
+     */
+    diffs(): Required<diffs.diffs>;
+
+    /**
+     * Clear diff list
+     */
+    cldiff(): void;
 }
 
 /**
  * Representse a slice of the cell grid, used for rules that need to access multiple cells at once
  */
-export interface grid_slice_t extends Omit<grid_t, "slice" | "write"> {}
+export interface grid_slice_t extends Omit<
+    grid_t,
+    "slice" | "write" | "diffs" | "cldiff"
+> {}

@@ -9,6 +9,7 @@ import * as cells from "./cells.js";
 
 import * as _grids from "./grid_types.js";
 import * as _cells from "./cell_types.js";
+import * as _diffs from "./diff_types.js";
 
 /**
  * Create a grid from a 2D array of cell values, compiling the cell values into the internal format used by the automata system.
@@ -60,6 +61,12 @@ class Grid implements _grids.grid_t {
 
     /** Fill value for out-of-bounds cells */
     private readonly fillValue: _cells.fcell_t;
+
+    /** Set of all differences since the last `cldiff` call */
+    private readonly _diffs: Required<_diffs.diffs> = {
+        cdiffs: [],
+        ddiffs: [],
+    };
 
     constructor(
         cells: _cells.fcell_t[][],
@@ -129,7 +136,23 @@ class Grid implements _grids.grid_t {
 
     write(x: number, y: number, cell: _cells.fcell_t): void {
         [x, y] = this._coords(x, y); // Apply wrapping to coordinates
+
+        // Check if coordinates are out of bounds, and return fill value if so
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) return;
+
+        // Track difference
+        this._diffs.cdiffs.push({ x, y, to: cell });
+
         this.cells[y][x] = cell;
+    }
+
+    diffs(): Required<_diffs.diffs> {
+        return this._diffs;
+    }
+
+    cldiff(): void {
+        this._diffs.cdiffs.splice(0);
+        this._diffs.ddiffs.splice(0);
     }
 
     /**
