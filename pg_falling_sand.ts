@@ -2,10 +2,10 @@ import {
     cell_t,
     compileCell,
     compileRule,
+    render,
     grid,
     step,
     rule_t,
-    fcell_t,
 } from "./src/module.js";
 
 // Import rules + cells
@@ -16,6 +16,7 @@ import "./src/cells/set/set.js";
 import "./src/rules/spatial/spatial.js";
 import "./src/rules/sequence/sequence.js";
 import "./src/rules/quantum/quantum.js";
+import "./src/render/terminal/terminal.js";
 
 const sand = {
     type: "set",
@@ -117,81 +118,66 @@ const width = process.stdout.columns;
 
 const myGrid = grid.fill(Math.floor(width / 2), height, air);
 myGrid.write(
-    (myGrid.width - 1) / 2 - 1,
+    Math.floor((myGrid.width - 1) / 2) - 1,
     3,
     compileCell({
         type: "color",
-        r: 100,
-        g: 100,
-        b: 100,
+        r: 0x11,
+        g: 0x11,
+        b: 0x11,
     }),
 );
 myGrid.write(
-    (myGrid.width - 1) / 2,
+    Math.floor((myGrid.width - 1) / 2),
     3,
     compileCell({
         type: "color",
-        r: 100,
-        g: 100,
-        b: 100,
+        r: 0x11,
+        g: 0x11,
+        b: 0x11,
     }),
 );
 myGrid.write(
-    (myGrid.width - 1) / 2 + 1,
+    Math.floor((myGrid.width - 1) / 2) + 1,
     3,
     compileCell({
         type: "color",
-        r: 100,
-        g: 100,
-        b: 100,
+        r: 0x11,
+        g: 0x11,
+        b: 0x11,
     }),
 );
-myGrid.write(
-    (myGrid.width - 1) / 2 + 2,
-    3,
-    compileCell({
-        type: "color",
-        r: 100,
-        g: 100,
-        b: 100,
-    }),
-);
+// myGrid.write(
+//     Math.floor((myGrid.width - 1) / 2) + 2,
+//     3,
+//     compileCell({
+//         type: "color",
+//         r: 0x11,
+//         g: 0x11,
+//         b: 0x11,
+//     }),
+// );
 
-let last = "";
-function print(period: number) {
-    // @ts-ignore
-    const str = (myGrid.cells as fcell_t[][])
-        .map((d) =>
-            d
-                .map((c) =>
-                    (c.data as any).value === 0
-                        ? "  "
-                        : (c.data as any).r === 100
-                          ? "//"
-                          : ((c.data as any).r ?? 0)
-                                .toString(16)
-                                .padStart(2, "0"),
-                )
-                .join(""),
-        )
-        .join("\n");
-    if (str === last) return true;
+let start: number = 0;
+let end: number = 0;
 
-    let header = ` ${period.toFixed(2)}ms `;
-    while (header.length + 2 < width) {
-        header = `-${header}-`;
-    }
-    console.log(`${header}\n${str}`);
+const myRender = render.compile({
+    type: "terminal",
+    write: (str: string) => {
+        const width = str.indexOf("\n");
 
-    last = str;
-    return false;
-}
+        let header = ` ${(end - start).toFixed(2)}ms `;
+        while (header.length + 2 <= width) header = "-" + header + "-";
 
-print(0);
-const interval = setInterval(() => {
-    const start = performance.now();
+        console.log(`${header}\n${str}`);
+    },
+    clear: () => console.clear(),
+});
+
+setInterval(() => {
+    start = performance.now();
     step(myGrid, rule);
-    const end = performance.now();
+    end = performance.now();
 
     if (
         // @ts-ignore
@@ -214,5 +200,5 @@ const interval = setInterval(() => {
         );
     }
 
-    if (print(end - start)) clearInterval(interval);
+    render.render(myRender, myGrid);
 }, 100);

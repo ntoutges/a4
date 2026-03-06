@@ -7,6 +7,7 @@
 
 import * as cells from "../../cells.js";
 import * as _cells from "../../cell_types.js";
+import { render } from "./render.js";
 
 export type color_cell = {
     type: "color";
@@ -67,6 +68,7 @@ cells.register({
     gt,
     lt,
     matches,
+    render,
 });
 
 declare module "../../cell_types.js" {

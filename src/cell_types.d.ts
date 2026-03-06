@@ -1,3 +1,5 @@
+import * as render from "./render_types.js";
+
 /** Registry of all registered cell types for type validation */
 export interface cell_registry {}
 
@@ -70,6 +72,14 @@ type DeterministicCell<R, C extends base_cell> = {
      * @param b
      */
     lt(a: Readonly<C>, b: Readonly<C>): boolean;
+
+    /**
+     * Render this cell to some view target
+     * @param cell  The cell data to render
+     * @param target The target to render the cell to
+     * @return `true` if the cell was rendered successfully, `false` otherwise.
+     */
+    render(cell: C, context: render.frender_t["ctx"]): boolean;
 };
 
 /**
@@ -92,7 +102,7 @@ type QuantumCell<R, C extends base_cell, T extends DeterministicCell<R, C>> = {
      * @returns     The extracted value to be used for rule execution. Note that this _must_ be deterministic
      */
     exec(cell: C): T;
-} & Omit<DeterministicCell<R, C>, "quantum">;
+} & Omit<DeterministicCell<R, C>, "quantum" | "render">;
 
 /**
  * Defines a single cell type in the cell grid

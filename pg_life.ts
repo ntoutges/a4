@@ -2,17 +2,19 @@ import {
     cell_t,
     compileCell,
     compileRule,
+    render,
     grid,
     step,
     rule_t,
     fcell_t,
 } from "./src/module.js";
 
-// Import rules + cells
+// Import rules + cells + renderers
 import "./src/cells/color/color.js";
 import "./src/cells/set/set.js";
 import "./src/rules/surround/surround.js";
 import "./src/rules/sequence/sequence.js";
+import "./src/render/terminal/terminal.js";
 
 const alive = {
     type: "color",
@@ -98,41 +100,26 @@ myGrid.write(0, 2, compileCell(alive));
 myGrid.write(1, 2, compileCell(alive));
 myGrid.write(2, 2, compileCell(alive));
 
-let last = "";
-function print(period: number) {
-    // @ts-ignore
-    const str = (myGrid.cells as fcell_t[][])
-        .map((d) =>
-            d
-                .map((c) =>
-                    (c.data as any).value === 0
-                        ? "  "
-                        : (c.data as any).r === 100
-                          ? "//"
-                          : ((c.data as any).r ?? 0)
-                                .toString(16)
-                                .padStart(2, "0"),
-                )
-                .join(""),
-        )
-        .join("\n");
-    if (str === last) return true;
+let start: number = 0;
+let end: number = 0;
 
-    let header = ` ${period.toFixed(2)}ms `;
-    while (header.length + 2 < width) {
-        header = `-${header}-`;
-    }
-    console.log(`${header}\n${str}`);
+const myRender = render.compile({
+    type: "terminal",
+    write: (str: string) => {
+        const width = str.indexOf("\n");
 
-    last = str;
-    return false;
-}
+        let header = ` ${(end - start).toFixed(2)}ms `;
+        while (header.length + 2 <= width) header = "-" + header + "-";
 
-print(0);
-const interval = setInterval(() => {
-    const start = performance.now();
+        console.log(`${header}\n${str}`);
+    },
+    clear: () => console.clear(),
+});
+
+setInterval(() => {
+    start = performance.now();
     step(myGrid, rule);
-    const end = performance.now();
+    end = performance.now();
 
-    if (print(end - start)) clearInterval(interval);
+    render.render(myRender, myGrid);
 }, 100);

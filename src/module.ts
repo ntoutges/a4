@@ -9,6 +9,7 @@ import * as mgrid from "./grid.js";
 import * as cell from "./cells.js";
 import * as rule from "./rules.js";
 import * as auto from "./automata.js";
+import * as mrender from "./render.js";
 
 // Copmilers
 export const compileCell = cell.compile;
@@ -21,6 +22,12 @@ export const grid = {
     fill: mgrid.fill,
 };
 
+// Render utilities
+export const render = {
+    compile: mrender.compile,
+    render: mrender.render,
+};
+
 // Core automata functionality
 export const step = auto.step;
 
@@ -28,3 +35,4 @@ export const step = auto.step;
 export type * from "./cell_types.js";
 export type * from "./rule_types.js";
 export type * from "./grid_types.js";
+export type * from "./render_types.js";
