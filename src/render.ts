@@ -32,10 +32,13 @@ export function register(renderer: _renders.Renderer<any, any>): void {
  * Compile a renderer to be used for rendering cells
  * @param renderer  The renderer to compile
  * @returns         The compiled renderer to be used for rendering cells
+ *
+ * @template T The type of renderer to compile, used for type inference
  */
-export function compile(
-    renderer: _renders.render_t,
-): _renders.base_renderer<any> {
+export function compile<T extends _renders.render_t["type"]>(
+    renderer: _renders.frender_type_t<T>["renderer"],
+    grid: _grids.grid_t,
+): _renders.frender_type_t<T>["inter"] {
     const type = renderer.type.toLowerCase();
 
     if (!registry.has(type)) {
@@ -43,7 +46,7 @@ export function compile(
     }
 
     const renderer_data = registry.get(type);
-    return renderer_data.compile(renderer);
+    return renderer_data.compile(renderer, grid);
 }
 
 /**
@@ -51,11 +54,10 @@ export function compile(
  * @param renderer  The renderer to use for rendering the grid
  * @param grid      The grid to render
  */
-export function render(
-    renderer: _renders.base_renderer<any>,
-    grid: _grids.grid_t,
-): void {
-    const preData = renderer.pre(grid);
+export function render(renderer: _renders.base_renderer<any>): void {
+    const grid = renderer.grid;
+
+    const preData = renderer.pre();
     let rlen: number;
 
     if (preData.full) {

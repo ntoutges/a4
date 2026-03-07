@@ -21,6 +21,9 @@ export function render(
     switch (context.type) {
         case "terminal":
             return terminal(cell, context);
+
+        case "canvas":
+            return canvas(cell, context);
     }
 
     // Failed to find valid renderer
@@ -45,6 +48,25 @@ function terminal(
     context.text(grey === 0 ? "  " : grey.toString(16).toUpperCase());
 
     /** @TODO Set color */
+
+    return true;
+}
+
+/**
+ * Render to a canvas
+ * @param cell      The color cell to render
+ * @param context   The canvas render context to render to
+ * @returns         `true` if the cell was rendered successfully, `false` otherwise.
+ */
+function canvas(
+    cell: color.color_compiled,
+    context: _renders.sfrender_t["canvas"]["ctx"],
+): boolean {
+    // Set fill style to cell color
+    context.ctx.fillStyle = `rgb(${cell.r}, ${cell.g}, ${cell.b})`;
+
+    // Fill the unit square with the cell color
+    context.ctx.fillRect(0, 0, 1, 1);
 
     return true;
 }

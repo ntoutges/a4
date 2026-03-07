@@ -11,6 +11,7 @@ export type render_t = {
 export type frender_t = {
     [K in keyof render_registry]: {
         renderer: render_registry[K]["user"];
+        inter: render_registry[K]["inter"];
         ctx: render_registry[K]["ctx"];
     };
 }[keyof render_registry];
@@ -21,6 +22,16 @@ export type sfrender_t = {
         ctx: render_registry[K]["ctx"];
     };
 };
+
+export type frender_type_t<T extends render_t["type"]> = {
+    [K in keyof render_registry]: render_registry[K]["user"]["type"] extends T
+        ? {
+              renderer: render_registry[K]["user"];
+              inter: render_registry[K]["inter"];
+              ctx: render_registry[K]["ctx"];
+          }
+        : never;
+}[keyof render_registry];
 
 export type pre_t = {
     /**
@@ -41,11 +52,15 @@ export interface base_renderer<T extends { type: string }> {
     readonly context: T;
 
     /**
+     * The grid that this renderer renders
+     */
+    readonly grid: grids.grid_t;
+
+    /**
      * Run before rendering any cells, on every frame
-     * @param renderer  The renderer to run pre-rendering logic for
      * @returns         Information about how to render the grid
      */
-    pre(grid: grids.grid_slice_t): pre_t;
+    pre(): pre_t;
 
     /**
      * Render a cell to some target
@@ -57,7 +72,6 @@ export interface base_renderer<T extends { type: string }> {
 
     /**
      * Run after rendering all cells, on every frame
-     * @param renderer  The renderer to run post-rendering logic for
      * @param rlen  The number of cells rendered in the current frame
      */
     post(rlen: number): void;
@@ -75,7 +89,8 @@ export type Renderer<R, T extends { type: string }> = {
     /**
      * Compile a user-friendly renderer for runtime use
      * @param renderer  The user-friendly renderer to compile
+     * @param grid      The grid to compile the renderer for
      * @return The computer-friendly compiled renderer to be used at runtime
      */
-    compile(renderer: R): base_renderer<T>;
+    compile(renderer: R, grid: grids.grid_t): base_renderer<T>;
 };

@@ -161,18 +161,21 @@ myGrid.write(
 let start: number = 0;
 let end: number = 0;
 
-const myRender = render.compile({
-    type: "terminal",
-    write: (str: string) => {
-        const width = str.indexOf("\n");
+const myRender = render.compile<"terminal">(
+    {
+        type: "terminal",
+        write: (str: string) => {
+            const width = str.indexOf("\n");
 
-        let header = ` ${(end - start).toFixed(2)}ms `;
-        while (header.length + 2 <= width) header = "-" + header + "-";
+            let header = ` ${(end - start).toFixed(2)}ms `;
+            while (header.length + 2 <= width) header = "-" + header + "-";
 
-        console.log(`${header}\n${str}`);
+            console.log(`${header}\n${str}`);
+        },
+        clear: () => console.clear(),
     },
-    clear: () => console.clear(),
-});
+    myGrid,
+);
 
 setInterval(() => {
     start = performance.now();
@@ -200,5 +203,5 @@ setInterval(() => {
         );
     }
 
-    render.render(myRender, myGrid);
+    render.render(myRender);
 }, 100);
