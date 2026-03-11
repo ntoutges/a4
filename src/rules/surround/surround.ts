@@ -278,6 +278,9 @@ function compile(
                 maxX: pmask[0].length - originX,
                 minY: -originY,
                 maxY: pmask.length - originY,
+                optim: {
+                    deterministic: true,
+                },
             },
         },
     };

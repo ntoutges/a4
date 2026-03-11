@@ -28,6 +28,10 @@ export type sequence_compiled = {
          */
         cbbox: _rules.cbbox_t;
     }[];
+
+    // Store the indices + order of rules to run
+    // Applies `optim.deterministic`
+    sequence: number[];
 } & _rules.base_rule;
 
 function compile(
@@ -40,11 +44,15 @@ function compile(
             rule: rule_data,
             data: {
                 rules: [],
+                sequence: [],
                 metadata: {
                     minX: 0,
                     minY: 0,
                     maxX: 0,
                     maxY: 0,
+                    optim: {
+                        deterministic: true,
+                    },
                 },
             },
         };
@@ -82,11 +90,18 @@ function compile(
         rule: rule_data,
         data: {
             rules: compiledRules,
+            sequence: [],
             metadata: {
                 minX: minX,
                 minY: minY,
                 maxX: maxX,
                 maxY: maxY,
+                optim: {
+                    // Deterministic iff all child rules are deterministic
+                    deterministic: compiledRules.every(
+                        (r) => r.rule.data.metadata.optim?.deterministic,
+                    ),
+                },
             },
         },
     };
@@ -98,9 +113,13 @@ function preexec(
     diffs: Required<_diffs.diffs>,
 ): _rules.preexec_t {
     const bboxes: _rules.bbox_t[] = [];
+    const changed = diffs.cdiffs.length !== 0;
+
+    // Clear rule sequence
+    rule.sequence.splice(0);
 
     // Run preexec on all children
-    for (const child of rule.rules) {
+    for (const [i, child] of rule.rules.entries()) {
         const res = rules.preexec(child.rule, grid, diffs);
 
         // Stash bbox cache in child entry
@@ -108,6 +127,11 @@ function preexec(
 
         // Stash all bboxes
         bboxes.push(res.bbox);
+
+        // Check if rule should run
+        if (changed || !child.rule.data.metadata.optim.deterministic) {
+            rule.sequence.push(i);
+        }
     }
 
     return {
@@ -126,7 +150,9 @@ function exec(
     const index = grid.index(x, y);
 
     // Attempt to run each child rule in sequence
-    main: for (const r of rule.rules) {
+    main: for (const i of rule.sequence) {
+        const r = rule.rules[i];
+
         // Check position against cached bbox
         // If invalid: try again
         if (

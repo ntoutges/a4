@@ -278,6 +278,9 @@ function compile(
                 minY: -originY,
                 maxX: before[0].length - originX,
                 maxY: before.length - originY,
+                optim: {
+                    deterministic: true,
+                },
             },
         },
     };

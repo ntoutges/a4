@@ -3,6 +3,8 @@
  * @description Quantum rule, used to run multiple rules in parallel in a single step
  * @author Nicholas T.
  * @copyright 2026 PiCO
+ *
+ * @todo: Apply child-rule-level optim.deterministic
  */
 
 import * as rules from "../../rules.js";
@@ -65,6 +67,9 @@ function compile(
                     minY: 0,
                     maxX: 0,
                     maxY: 0,
+                    optim: {
+                        deterministic: true,
+                    },
                 },
             },
         };
@@ -141,6 +146,13 @@ function compile(
                 minY: minY,
                 maxX: maxX,
                 maxY: maxY,
+
+                optim: {
+                    // Deterministic iff all child rules are deterministic
+                    deterministic: compiledRules.every(
+                        (r) => r.rule.data.metadata.optim?.deterministic,
+                    ),
+                },
             },
         },
     };

@@ -18,6 +18,14 @@ import * as _diffs from "./diff_types.js";
  * @param rule  The rule to apply to the grid
  */
 export function step(grid: _grids.grid_t, rule: _rules.frule_t): void {
+    // Deterministic rule + repeated state => no changes, able to skip entire step
+    if (
+        rule.data.metadata.optim.deterministic &&
+        grid.diffs().cdiffs.length === 0
+    ) {
+        return;
+    }
+
     const diffs = execute(
         grid.slice(0, 0, grid.width, grid.height),
         grid.diffs(),

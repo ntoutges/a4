@@ -28,6 +28,15 @@ export type base_rule = {
 
         /** The maximum y coordinate of the rule's bounding box */
         maxY: number;
+
+        /** Optimizations that can be applied to this rule */
+        optim: {
+            /**
+             * Indicates that the same state will _always_ produce the same output
+             * Allows simulation to pause if some state repeats
+             */
+            deterministic: boolean;
+        };
     };
 };
 

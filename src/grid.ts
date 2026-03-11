@@ -57,7 +57,7 @@ class Grid implements _grids.grid_t {
     readonly padding: Readonly<{ n: number; s: number; e: number; w: number }>;
 
     /** Internal cell storage */
-    private readonly cells: _cells.fcell_t[][];
+    private readonly cells: _cells.fcell_t[][] = [];
 
     /** Fill value for out-of-bounds cells */
     private readonly fillValue: _cells.fcell_t;
@@ -73,22 +73,12 @@ class Grid implements _grids.grid_t {
         fillValue: _cells.fcell_t,
         options?: _grids.grid_options_t,
     ) {
-        // Create copy of cells to prevent external mutation of the grid
-        cells = cells.map((row) => row.slice());
-
         const height = cells.length;
         let width = 0;
 
         // Find width of grid from the longest row
         for (const row of cells) {
             width = Math.max(width, row.length);
-        }
-
-        // Fill in any missing cells with the fill value, to ensure all rows have the same length and the grid is rectangular
-        for (const row of cells) {
-            while (row.length < width) {
-                row.push(fillValue);
-            }
         }
 
         this.height = height;
@@ -106,8 +96,25 @@ class Grid implements _grids.grid_t {
             w: options?.padW ?? 0,
         };
 
-        this.cells = cells;
         this.fillValue = fillValue;
+
+        // Fill in any missing cells with the fill value, to ensure all rows have the same length and the grid is rectangular
+        for (let y = 0; y < height; y++) {
+            const row: _cells.fcell_t[] = [];
+            this.cells.push(row);
+
+            for (let x = 0; x < width; x++) {
+                const cell = x < cells[y].length ? cells[y][x] : fillValue;
+
+                // Push cell + diff
+                row.push(cell);
+                this._diffs.cdiffs.push({
+                    x,
+                    y,
+                    to: cell,
+                });
+            }
+        }
     }
 
     slice(

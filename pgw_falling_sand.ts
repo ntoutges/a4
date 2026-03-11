@@ -103,8 +103,8 @@ const rule = compileRule({
     ],
 });
 
-const width = 50;
-const height = 50;
+const width = 100;
+const height = 100;
 
 const myGrid = grid.fill(width, height, air);
 
