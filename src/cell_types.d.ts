@@ -21,6 +21,19 @@ export type base_cell = {
     metadata: {
         /** Whether this cell can be used for creating new states */
         generating: boolean;
+
+        /**
+         * String representation of this cell
+         * Should be stable across multiple same-content (yet different) objects
+         * In general: Takes the form of `<type>(...<args>)`
+         */
+        descriptor: string;
+
+        /** Optimizations that can be applied to this cell */
+        optim: {
+            /** Description can be used for exact cell matching [ (desc == desc <=> same cell), and (eq == match) ] */
+            descmatch: boolean;
+        };
     };
 };
 
@@ -54,6 +67,7 @@ type DeterministicCell<R, C extends base_cell> = {
 
     /**
      * Evaluates `a == b` for two cells, used for rule matching
+     * For most purposes: `return a.data.metadata.descriptor === b.data.metadata.descriptor` is enough
      * @param a
      * @param b
      */

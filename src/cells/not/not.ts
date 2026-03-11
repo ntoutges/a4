@@ -19,16 +19,23 @@ export type not_compiled = {
 
 // Register rule
 function compile(cell: not_cell): not_compiled {
+    const ccell = cells.compile(cell.cell);
+
     return {
-        cell: cells.compile(cell.cell),
+        cell: ccell,
         metadata: {
             generating: false,
+            descriptor: `not(${ccell.data.metadata.descriptor})`,
+
+            optim: {
+                descmatch: ccell.data.metadata.optim.descmatch,
+            },
         },
     };
 }
 
 function eq(a: not_compiled, b: not_compiled): boolean {
-    return !a.cell.cell.eq(a.cell.data as any, b.cell.data as any);
+    return a.metadata.descriptor === b.metadata.descriptor;
 }
 
 function gt(a: not_compiled, b: not_compiled): boolean {

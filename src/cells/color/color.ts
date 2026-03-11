@@ -37,12 +37,17 @@ function compile(cell: color_cell): color_compiled {
         value,
         metadata: {
             generating: true,
+            descriptor: `color(${r},${g},${b})`,
+
+            optim: {
+                descmatch: false,
+            },
         },
     };
 }
 
 function eq(a: color_compiled, b: color_compiled): boolean {
-    return a.value === b.value;
+    return a.value === b.value; // Faster computation than descriptors; Leaving alone
 }
 
 function gt(a: color_compiled, b: color_compiled): boolean {

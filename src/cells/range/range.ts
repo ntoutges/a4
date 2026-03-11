@@ -56,21 +56,26 @@ function compile(cell: range_cell): range_compiled {
         mode = range_mode.COLOR;
     }
 
+    const cmin = cells.compile(cell.min);
+    const cmax = cells.compile(cell.max);
+
     return {
-        min: cells.compile(cell.min),
-        max: cells.compile(cell.max),
+        min: cmin,
+        max: cmax,
         mode: mode,
         metadata: {
             generating: mode !== range_mode.FALLBACK, // Range cells only generate if not in fallback mode
+            descriptor: `range(${cmin.data.metadata.descriptor},${cmax.data.metadata.descriptor})`,
+
+            optim: {
+                descmatch: false,
+            },
         },
     };
 }
 
 function eq(a: range_compiled, b: range_compiled): boolean {
-    return (
-        a.min.cell.eq(a.min.data as any, b.min.data as any) &&
-        a.max.cell.eq(a.max.data as any, b.max.data as any)
-    );
+    return a.metadata.descriptor === b.metadata.descriptor;
 }
 
 function gt(a: range_compiled, b: range_compiled): boolean {

@@ -7,7 +7,6 @@
 
 import * as cells from "../../cells.js";
 import * as _cells from "../../cell_types.js";
-import { color_compiled } from "../color/color.js";
 
 export type set_cell = {
     type: "set";
@@ -16,8 +15,7 @@ export type set_cell = {
 
 export type set_compiled = {
     acells: _cells.fcell_t[]; // Array of compiled cells in the set, for iteration during generation
-    scells: Set<_cells.fcell_t>; // Precomputed set of compiled cells in the set, for quick checking during matches
-    types: Set<string>; // Precomputed set of cell types in the set, for quick checking during matches
+    scells: Set<string>; // Precomputed set of compiled cell descriptors in the set, for quick checking during matches
 } & _cells.base_cell;
 
 // Register rule
@@ -26,32 +24,32 @@ function compile(cell: set_cell): set_compiled {
         throw new Error("Set cells must contain at least one cell");
     }
 
-    // Copmile options
+    // Compile options
     const compiledCells = cell.cells.map((c) => cells.compile(c));
+
+    // Order options by their descriptors
+    compiledCells.sort((a, b) =>
+        a.data.metadata.descriptor > b.data.metadata.descriptor ? 1 : -1,
+    );
+
+    const descriptors = compiledCells.map((a) => a.data.metadata.descriptor);
 
     return {
         acells: compiledCells,
-        scells: new Set(compiledCells),
-
-        // Precompute types for quick checking during matches
-        types: new Set(compiledCells.map((c) => c.cell.type)),
+        scells: new Set(descriptors),
         metadata: {
             generating: true,
+            descriptor: `set(${descriptors.join(",")})`,
+
+            optim: {
+                descmatch: false,
+            },
         },
     };
 }
 
 function eq(a: set_compiled, b: set_compiled): boolean {
-    if (a.acells.length !== b.acells.length) return false;
-
-    for (const cell of a.scells) {
-        if (!b.scells.has(cell)) {
-            return false;
-        }
-    }
-
-    // All cells match; sets are equal
-    return true;
+    return a.metadata.descriptor === b.metadata.descriptor;
 }
 
 function gt(a: set_compiled, b: set_compiled): boolean {
@@ -83,20 +81,7 @@ function lt(a: set_compiled, b: set_compiled): boolean {
 }
 
 function matches(a: set_compiled, b: _cells.fcell_t): boolean {
-    // OPTIMIZATION: Check if the cell type is in the set's types; if not, it can't match
-    if (!a.types.has(b.cell.type)) return false;
-
-    // OPTIMIZATION: Check if the cell is in the set's cells; if so, it matches
-    if (a.scells.has(b)) return true;
-
-    // Need to check for non-identical-object matches by iterating through set
-    for (const cell of a.acells) {
-        if (cell.cell.matches(cell.data as any, b)) {
-            return true;
-        }
-    }
-
-    return false; // No match found
+    return a.scells.has(b.data.metadata.descriptor);
 }
 
 function execute(cell: set_compiled): _cells.fcell_t {
