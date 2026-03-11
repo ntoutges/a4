@@ -1,0 +1,125 @@
+#app {
+    width: 100vw;
+    height: 100vh;
+    margin: 0px;
+    padding: 0px;
+
+    overflow: hidden;
+    background: #111;
+    font-family: monospace;
+    color: #ddd;
+}
+
+#main-content {
+    display: flex;
+    flex-direction: row;
+
+    width: 100%;
+    height: 100%;
+}
+
+#canvas {
+    flex-grow: 1;
+
+    width: 0px;
+}
+
+#sidebar {
+    width: 200px;
+
+    background: #1b1b1b;
+    border-left: 1px solid #333;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 12px;
+
+    pointer-events: auto;
+}
+
+#sidebar-title {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #aaa;
+}
+
+#sidebar-cells {
+    display: flex;
+    flex-direction: column;
+}
+
+#sidebar-cells:empty::after {
+    content: "No Cells Registered";
+    font-style: italic;
+}
+
+.cell-option {
+    padding: 8px;
+    margin-bottom: 6px;
+
+    background: #262626;
+    border-radius: 4px;
+
+    cursor: pointer;
+
+    transition: background 0.15s;
+}
+
+.cell-option:hover {
+    background: #333;
+}
+
+.cell-option.selected {
+    background: #4a7cff;
+    color: #fff;
+}
+
+#stats {
+    pointer-events: none;
+
+    position: absolute;
+    top: 8px;
+    left: 8px;
+
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+
+    font-size: 12px;
+
+    pointer-events: none;
+}
+
+.stats-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.stats-label {
+    color: #aaa;
+}
+
+.stats-sim {
+    color: #7fc8ff;
+
+    &::before {
+        content: "SIM: ";
+    }
+}
+
+.stats-render {
+    color: #9cff7f;
+
+    &::before {
+        content: "REN: ";
+    }
+}
+
+.stats-anim {
+    color: #ffc97f;
+
+    &::before {
+        content: "ANM: ";
+    }
+}
