@@ -296,54 +296,52 @@ function ptokenize(picture: string): string[][] {
 
 function preexec(
     rule: spatial_compiled,
-    grid: Readonly<_grids.grid_slice_t>,
+    grid: Readonly<_grids.readonly_grid_t>,
     diffs: Required<_diffs.diffs>,
 ): _rules.preexec_t {
-    // @TODO Be smarter about bbox
-    // IE: Only execute on diffs which resulted in a value matching the focused cell
-    return {
-        bbox: {
-            mode: _rules.bbox_modes.ALL,
-        },
-    };
-
-    // OPTIMIZATION: ONLY CHECK DIFFS
-    // PROBLEM: IGNORES NON-DIFF MATCHING CELLS...
-
     // Central point doesn't impose restriction
     // Must check all points...
-    // if (rule.originReq === -1) {
-    //     return {
-    //         bbox: {
-    //             mode: _rules.bbox_modes.ALL,
-    //         },
-    //     };
-    // }
+    if (rule.originReq === -1) {
+        return {
+            bbox: {
+                mode: _rules.bbox_modes.ALL,
+            },
+        };
+    }
 
-    // const origin = rule.reqs[rule.originReq];
-    // const points: { x: number; y: number }[] = [];
+    const origin = rule.reqs[rule.originReq];
 
-    // // Return only locations of diffs that matche central cell
-    // for (const diff of diffs.cdiffs) {
-    //     if (origin.cell.cell.matches(origin.cell.data as any, diff.to)) {
-    //         // Reuse `diff` object to avoid replicated work
-    //         points.push(diff);
-    //     }
-    // }
+    const cache = grid.cache(origin.cell);
 
-    // return {
-    //     bbox: {
-    //         mode: _rules.bbox_modes.POINTS,
-    //         points,
-    //     },
-    // };
+    // Heuristic: Too many points; Switch to rendering all cells
+    if (cache.size() > (grid.width * grid.height) / 4) {
+        return {
+            bbox: {
+                mode: _rules.bbox_modes.ALL,
+            },
+        };
+    }
+
+    // Translate cache into format that preexec bbox can understand
+    const points: { x: number; y: number }[] = [];
+    for (const [x, y] of cache.keys()) {
+        points.push({ x, y });
+    }
+
+    // Only check points that match the central point
+    return {
+        bbox: {
+            mode: _rules.bbox_modes.POINTS,
+            points: points,
+        },
+    };
 }
 
 function exec(
     rule: spatial_compiled,
     x: number,
     y: number,
-    grid: Readonly<_grids.grid_slice_t>,
+    grid: Readonly<_grids.readonly_grid_t>,
     reserved: ReadonlySet<number>,
 ): _diffs.diffs | null {
     const qcells = new Map<number, _cells.fcell_t>();

@@ -138,7 +138,7 @@ export function merge_bbox(bboxes: _rules.bbox_t[]): _rules.bbox_t {
         }
     }
 
-    const width = maxX - minX + 1;
+    const pwidth = pmaxX - pminX + 1;
     const dedupedIndices = new Set<number>();
 
     // Remove any redundant points
@@ -157,7 +157,7 @@ export function merge_bbox(bboxes: _rules.bbox_t[]): _rules.bbox_t {
         }
 
         // Remove any duplicate points
-        const index = point.x + point.y * width;
+        const index = point.x + point.y * pwidth;
         if (dedupedIndices.has(index)) {
             points.splice(i, 1);
             continue;
@@ -233,7 +233,7 @@ export function execute(
 
 export function preexec(
     rule: _rules.frule_t,
-    grid: Readonly<_grids.grid_slice_t>,
+    grid: Readonly<_grids.readonly_grid_t>,
     diffs: Required<_diffs.diffs>,
 ): _rules.preexec_t {
     return rule.rule.preexec(rule.data as any, grid, diffs);

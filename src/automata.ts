@@ -26,11 +26,7 @@ export function step(grid: _grids.grid_t, rule: _rules.frule_t): void {
         return;
     }
 
-    const diffs = execute(
-        grid.slice(0, 0, grid.width, grid.height),
-        grid.diffs(),
-        rule,
-    );
+    const diffs = execute(grid, grid.diffs(), rule);
 
     grid.cldiff(); // Clear old diffs for this tick
     apply(grid, diffs);
@@ -44,7 +40,7 @@ export function step(grid: _grids.grid_t, rule: _rules.frule_t): void {
  * @returns     The cell differences resulting from applying the rule to the grid
  */
 function execute(
-    grid: Readonly<_grids.grid_slice_t>,
+    grid: Readonly<_grids.readonly_grid_t>,
     diffs: Required<_diffs.diffs>,
     rule: _rules.frule_t,
 ): Required<_diffs.diffs> {
@@ -54,10 +50,16 @@ function execute(
     // Run preexec
     const preexec = rules.preexec(rule, grid, diffs);
 
-    let minX: number;
-    let minY: number;
-    let maxX: number;
-    let maxY: number;
+    // Precompute the bounds of the area where rule can be run based on the rule metadata and grid size, to
+    // Ensure the rule is only run on areas where it is guaranteed to be valid and not go out of bounds of the grid
+    const minY = grid.wrap.y ? 0 : metadata.minY - grid.padding.n;
+    const maxY = grid.wrap.y
+        ? grid.height - 1
+        : grid.height - metadata.maxY + grid.padding.s;
+    const minX = grid.wrap.x ? 0 : metadata.minX - grid.padding.w;
+    const maxX = grid.wrap.x
+        ? grid.width - 1
+        : grid.width - metadata.maxX + grid.padding.e;
 
     // Store all cell differences resulting from running the rule on the grid
     const allDiffs: Required<_diffs.diffs> = {
@@ -71,17 +73,6 @@ function execute(
 
     // Run on all bounds
     if (preexec.bbox.mode === _rules.bbox_modes.ALL) {
-        // Precompute the bounds of the area to run the rule on based on the rule metadata and grid size, to
-        // Ensure the rule is only run on areas where it is guaranteed to be valid and not go out of bounds of the grid
-        const minY = grid.wrap.y ? 0 : metadata.minY - grid.padding.n;
-        const maxY = grid.wrap.y
-            ? grid.height - 1
-            : grid.height - metadata.maxY + grid.padding.s;
-        const minX = grid.wrap.x ? 0 : metadata.minX - grid.padding.w;
-        const maxX = grid.wrap.x
-            ? grid.width - 1
-            : grid.width - metadata.maxX + grid.padding.e;
-
         for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
                 subexec(rule, x, y, grid, reserved, allDiffs);
@@ -93,13 +84,13 @@ function execute(
             preexec.bbox.mode === _rules.bbox_modes.RECT ||
             preexec.bbox.mode === _rules.bbox_modes.HYBRID
         ) {
-            const minX = preexec.bbox.minX;
-            const minY = preexec.bbox.minY;
-            const maxX = preexec.bbox.maxX;
-            const maxY = preexec.bbox.maxY;
+            const bminX = Math.max(preexec.bbox.minX, minX);
+            const bminY = Math.max(preexec.bbox.minY, minY);
+            const bmaxX = Math.min(preexec.bbox.maxX, maxX);
+            const bmaxY = Math.min(preexec.bbox.maxY, maxY);
 
-            for (let y = minY; y <= maxY; y++) {
-                for (let x = minX; x <= maxX; x++) {
+            for (let y = bminY; y <= bmaxY; y++) {
+                for (let x = bminX; x <= bmaxX; x++) {
                     subexec(rule, x, y, grid, reserved, allDiffs);
                 }
             }
@@ -111,6 +102,7 @@ function execute(
             preexec.bbox.mode === _rules.bbox_modes.HYBRID
         ) {
             for (const { x, y } of preexec.bbox.points) {
+                if (x < minX || x > maxX || y < minY || y > maxY) continue; // Skip points that are out-of-bounds
                 subexec(rule, x, y, grid, reserved, allDiffs);
             }
         }

@@ -296,14 +296,41 @@ function ptokenize(picture: string): string[][] {
 
 function preexec(
     rule: surround_compiled,
-    grid: Readonly<_grids.grid_slice_t>,
+    grid: Readonly<_grids.readonly_grid_t>,
     diffs: Required<_diffs.diffs>,
 ): _rules.preexec_t {
-    // @TODO Be smarter about bbox
-    // IE: Only execute on diffs which resulted in a value matching the focused cell
+    // Central point doesn't impose restriction
+    // Must check all points...
+    if (rule.req === null) {
+        return {
+            bbox: {
+                mode: _rules.bbox_modes.ALL,
+            },
+        };
+    }
+
+    const cache = grid.cache(rule.req);
+
+    // Heuristic: Too many points; Switch to rendering all cells
+    if (cache.size() > (grid.width * grid.height) / 4) {
+        return {
+            bbox: {
+                mode: _rules.bbox_modes.ALL,
+            },
+        };
+    }
+
+    // Translate cache into format that preexec bbox can understand
+    const points: { x: number; y: number }[] = [];
+    for (const [x, y] of cache.keys()) {
+        points.push({ x, y });
+    }
+
+    // Only check points that match the central point
     return {
         bbox: {
-            mode: _rules.bbox_modes.ALL,
+            mode: _rules.bbox_modes.POINTS,
+            points: points,
         },
     };
 }

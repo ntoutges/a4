@@ -160,7 +160,7 @@ function compile(
 
 function preexec(
     rule: quantum_compiled,
-    grid: Readonly<_grids.grid_slice_t>,
+    grid: Readonly<_grids.readonly_grid_t>,
     diffs: Required<_diffs.diffs>,
 ): _rules.preexec_t {
     const bboxes: _rules.bbox_t[] = [];

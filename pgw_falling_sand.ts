@@ -186,7 +186,7 @@ setInterval(() => {
 
     rmspt += end - start;
     rcycles++;
-}, 10);
+}, 0);
 
 let smspt = 0;
 let scycles = 0;

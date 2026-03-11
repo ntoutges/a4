@@ -163,7 +163,7 @@ export type Rule<R, C extends base_rule> = {
      */
     preexec(
         rule: C,
-        grid: Readonly<grid.grid_slice_t>,
+        grid: Readonly<grid.readonly_grid_t>,
         diffs: Required<diffs.diffs>,
     ): preexec_t;
 

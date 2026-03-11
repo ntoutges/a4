@@ -10,7 +10,7 @@ import * as _cells from "../../cell_types.js";
 import * as _grids from "../../grid_types.js";
 import * as _canvas from "./canvas.js";
 import * as cells from "../../cells.js";
-import { Map2D, Set2D } from "./map2d.js";
+import { Map2D, Set2D } from "../../map2d.js";
 
 /** Data about each chunk */
 type chunk_entry = Readonly<{

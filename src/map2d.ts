@@ -12,6 +12,9 @@ export class Map2D<K, V> {
      */
     private readonly map: Map<K, Map<K, V>> = new Map();
 
+    // Cached # of entries in map
+    private _size: number = 0;
+
     /**
      * Set a value in the map at the given coordinates
      * @param x
@@ -25,6 +28,7 @@ export class Map2D<K, V> {
             this.map.set(y, row);
         }
 
+        if (!row.has(x)) this._size++;
         row.set(x, value);
     }
 
@@ -59,6 +63,7 @@ export class Map2D<K, V> {
         if (!row) return;
 
         // Remove value from row
+        if (row.has(x)) this._size--;
         row.delete(x);
 
         // Row empty: remove it from the map
@@ -72,6 +77,15 @@ export class Map2D<K, V> {
      */
     clear(): void {
         this.map.clear();
+        this._size = 0;
+    }
+
+    /**
+     * Get the size of the map
+     * @returns     The size of the map
+     */
+    size(): number {
+        return this._size;
     }
 
     /**
@@ -130,6 +144,9 @@ export class Set2D<K> {
      */
     private readonly set: Map<K, Set<K>> = new Map();
 
+    // Cached # of entries in map
+    private _size: number = 0;
+
     /**
      * Add some coordinates to the set
      * @param x
@@ -143,6 +160,7 @@ export class Set2D<K> {
             this.set.set(y, row);
         }
 
+        if (!row.has(x)) this._size++;
         row.add(x);
     }
 
@@ -167,6 +185,7 @@ export class Set2D<K> {
         if (!row) return;
 
         // Remove value from row
+        if (row.has(x)) this._size--;
         row.delete(x);
 
         // Row empty: remove it from the set
@@ -180,6 +199,15 @@ export class Set2D<K> {
      */
     clear(): void {
         this.set.clear();
+        this._size = 0;
+    }
+
+    /**
+     * Get the size of the set
+     * @returns     The size of the set
+     */
+    size(): number {
+        return this._size;
     }
 
     /**
@@ -198,3 +226,12 @@ export class Set2D<K> {
         return result;
     }
 }
+
+export interface ReadonlyMap2D<K, V> extends Omit<
+    Map2D<K, V>,
+    "set" | "delete" | "clear"
+> {}
+export interface ReadonlySet2D<K> extends Omit<
+    Set2D<K>,
+    "add" | "delete" | "clear"
+> {}

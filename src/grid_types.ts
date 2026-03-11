@@ -1,5 +1,6 @@
 import * as cells from "./cell_types";
 import * as diffs from "./diff_types";
+import { ReadonlySet2D } from "./map2d.js";
 
 export type grid_options_t = {
     // Whether to wrap around the x and y axes when accessing cells out of bounds, defaulting to false (no wrapping)
@@ -83,12 +84,24 @@ export interface grid_t {
      * Clear diff list
      */
     cldiff(): void;
+
+    /**
+     * Get the cache for some cell type. If the cache doesn't already exist, it will be created
+     * @param cell  The cell to buld/search through
+     * @returns     The cache, where every entry represents a cell in the grid
+     */
+    cache(cell: cells.fcell_t): ReadonlySet2D<number>;
 }
+
+/**
+ * Represents the grid, while removing the ability to edit
+ */
+export interface readonly_grid_t extends Omit<grid_t, "write" | "cldiff"> {}
 
 /**
  * Representse a slice of the cell grid, used for rules that need to access multiple cells at once
  */
 export interface grid_slice_t extends Omit<
-    grid_t,
-    "slice" | "write" | "diffs" | "cldiff"
+    readonly_grid_t,
+    "slice" | "diffs" | "cache"
 > {}
