@@ -202,6 +202,7 @@ function simToggle() {
 // Pause simulation + run a step
 function simStep() {
     tickInterval.pause();
+    ctlSidebar.classList.add("paused");
     tick();
 }
 
@@ -354,7 +355,15 @@ function canvasPointerDown(e: PointerEvent) {
         return;
     }
 
-    if (mainDrawing || secondaryDrawing) canvasDraw(e);
+    if (mainDrawing || secondaryDrawing) {
+        const cell = generateSelectedCell(
+            mainDrawing ? selectedCell0 : selectedCell2,
+        );
+        if (cell) {
+            registeredGrid.write(cx, cy, cell);
+            render.render(renderer);
+        }
+    }
 }
 
 function canvasPointerMove(e: PointerEvent) {
