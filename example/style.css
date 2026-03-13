@@ -1,3 +1,8 @@
+@import "material-symbols/outlined.css";
+.material-symbols-outlined {
+    font-variation-settings: "FILL" 1;
+}
+
 #app {
     width: 100vw;
     height: 100vh;
@@ -74,6 +79,13 @@
     background: #4a7cff;
     color: #fff;
 }
+.cell-option.selected2 {
+    background: #ff4a74;
+    color: #fff;
+}
+.cell-option.selected.selected2 {
+    background: #ab4aff;
+}
 
 #stats {
     pointer-events: none;
@@ -122,4 +134,106 @@
     &::before {
         content: "ANM: ";
     }
+}
+
+#sidebar-controls {
+    border-top: 1px solid #333;
+    padding-top: 10px;
+    margin-top: auto;
+
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+        "controls indicator"
+        "slider slider";
+    gap: 8px;
+}
+
+#controls-buttons {
+    display: flex;
+    gap: 8px;
+
+    grid-area: controls;
+}
+
+#controls-indicator {
+    grid-area: indicator;
+    position: relative;
+    overflow: hidden;
+
+    border: solid #707070 1px;
+    border-top-right-radius: 10px;
+}
+
+#controls-indicator-bar {
+    position: absolute;
+
+    background: #4a7cff;
+    box-shadow: 0px 0px 100px 0px #4a7cff;
+    height: 100%;
+    width: calc(var(--factor, 0) * 100%);
+    min-width: 1%;
+
+    left: calc(var(--progress, 0) * 100%);
+    translate: calc((var(--progress, 0) - 1) * 100%) 0px;
+}
+
+#controls-indicator-bar.strobing {
+    width: 100%;
+    left: 0px;
+    translate: 0px;
+
+    animation: indicator_strobing ease-in-out alternate infinite 800ms;
+}
+
+@keyframes indicator_strobing {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Hide redundant buttons */
+#sidebar-controls.paused #control-pause,
+#sidebar-controls:not(.paused) #control-play {
+    display: none;
+}
+
+.control-button {
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #262626;
+    border: none;
+    border-radius: 4px;
+
+    color: #ddd;
+    cursor: pointer;
+}
+
+.control-button:hover {
+    background: #333;
+}
+
+#controls-speed {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    grid-area: slider;
+}
+
+#speed-label {
+    font-size: 12px;
+    color: #aaa;
+}
+
+#speed-slider {
+    width: 100%;
 }

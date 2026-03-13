@@ -17,6 +17,7 @@ import {
     render,
     step,
 } from "../src/module.js";
+import { SmartInterval } from "./smartInterval.js";
 
 // Store registered items
 const registeredCells = new Map<string, fcell_t>();
@@ -25,7 +26,8 @@ let registeredGrid: grid_t | null = null;
 let renderer: ReturnType<typeof render.compile<"canvas">> | null;
 
 // Store the current selected cell
-let selectedCell: string | null = null;
+let selectedCell0: string | null = null; // Left click
+let selectedCell2: string | null = null; // Right click
 
 // Last coordinates of mouse during drag
 let lastX: number = 0;
@@ -48,18 +50,41 @@ let stat_sim_max = 0;
 let stat_ren_max = 0;
 let stat_anm_max = 0;
 
-let mainDrawing: boolean = false; // Drawing sand
+let mainDrawing: boolean = false; // Drawing (left)
+let secondaryDrawing: boolean = false; // Drawing (right)
 let dragging: boolean = false; // Dragging scene
 
 const cellSidebar = document.getElementById("sidebar-cells") as HTMLElement;
+const ctlSidebar = document.getElementById("sidebar-controls") as HTMLElement;
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const canvasResizeObserver = new ResizeObserver(onCanvasResize);
 
-cellSidebar.addEventListener("click", cellClick, { capture: true });
+const ctlPlay = document.getElementById("control-play") as HTMLElement;
+const ctlPause = document.getElementById("control-pause") as HTMLElement;
+const ctlStep = document.getElementById("control-step") as HTMLElement;
+const ctlSpeed = document.getElementById("speed-slider") as HTMLInputElement;
+const ctlIndicatorBar = document.getElementById(
+    "controls-indicator-bar",
+) as HTMLElement;
+
+const tickInterval = new SmartInterval(tick, 1000);
+
+cellSidebar.addEventListener("pointerup", cellClick, { capture: true });
+cellSidebar.addEventListener("contextmenu", (e) => e.preventDefault(), {
+    capture: true,
+});
 canvas.addEventListener("pointerdown", canvasPointerDown);
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 canvas.addEventListener("pointermove", canvasPointerMove);
 canvas.addEventListener("pointerup", canvasPointerUp);
 canvasResizeObserver.observe(canvas);
+
+ctlPlay.addEventListener("click", simToggle);
+ctlPause.addEventListener("click", simToggle);
+ctlStep.addEventListener("click", simStep);
+ctlSpeed.addEventListener("input", simAdjust);
+simAdjust();
+tickInterval.play();
 
 /**
  * Register some set of cells, allowing the user to use them
@@ -81,9 +106,12 @@ export function registerCells(cells: Record<string, cell_t>) {
         option.textContent = id;
 
         // Autoselect first item
-        if (selectedCell === null) {
-            selectedCell = id;
+        if (selectedCell0 === null) {
+            selectedCell0 = id;
             option.classList.add("selected");
+        } else if (selectedCell2 === null) {
+            selectedCell2 = id;
+            option.classList.add("selected2");
         }
 
         cellSidebar.append(option);
@@ -142,9 +170,11 @@ export function tick() {
     stat_sim_ct++;
     stat_sim_max = Math.max(stat_sim_max, sim_delta);
 
-    // Readd cell on tick
-    if (mainDrawing) {
-        const cell = generateSelectedCell();
+    // Read cell on tick
+    if (mainDrawing || secondaryDrawing) {
+        const cell = generateSelectedCell(
+            mainDrawing ? selectedCell0 : selectedCell2,
+        );
         if (cell) registeredGrid.write(lastCX, lastCY, cell);
     }
 
@@ -156,6 +186,35 @@ export function tick() {
     stat_ren_tot += ren_delta;
     stat_ren_ct++;
     stat_ren_max = Math.max(stat_ren_max, ren_delta);
+}
+
+// Play/pause simulation
+function simToggle() {
+    if (tickInterval.playing()) {
+        tickInterval.pause();
+        ctlSidebar.classList.add("paused");
+    } else {
+        tickInterval.play();
+        ctlSidebar.classList.remove("paused");
+    }
+}
+
+// Pause simulation + run a step
+function simStep() {
+    tickInterval.pause();
+    tick();
+}
+
+// Adjust simulation speed
+function simAdjust() {
+    const raw = ctlSpeed.valueAsNumber; // Value [0, 1]
+
+    // @TODO: Improve raw->period conversion
+    const period = 1000 * Math.exp(raw * Math.log(10 / 1000));
+
+    tickInterval.period(period);
+    ctlIndicatorBar.style.setProperty("--factor", raw.toString());
+    ctlIndicatorBar.classList.toggle("strobing", period < 100);
 }
 
 // Animate renderer
@@ -172,6 +231,12 @@ function animate() {
     stat_anm_tot += anm_delta;
     stat_anm_ct++;
     stat_anm_max = Math.max(stat_anm_max, anm_delta);
+
+    // Update tick indicator
+    ctlIndicatorBar.style.setProperty(
+        "--progress",
+        tickInterval.progress().toString(),
+    );
 }
 
 // Update stats
@@ -224,17 +289,39 @@ function cellClick(e: MouseEvent) {
             : null;
     if (!cellEl) return; // Didn't click on cell selector
 
-    // Deselect previous
-    if (selectedCell !== null) {
-        cellSidebar
-            .querySelector(`[data-id="${selectedCell.replace(/"/g, '\\"')}"]`)
-            ?.classList.remove("selected");
+    // Left click
+    if (e.button === 0) {
+        // Deselect previous
+        if (selectedCell0 !== null) {
+            cellSidebar
+                .querySelector(
+                    `[data-id="${selectedCell0.replace(/"/g, '\\"')}"]`,
+                )
+                ?.classList.remove("selected");
+        }
+
+        selectedCell0 = cellEl.dataset.id as string;
+
+        // (Visually) select new
+        cellEl.classList.add("selected");
     }
 
-    selectedCell = cellEl.dataset.id as string;
+    // Right click
+    else if (e.button === 2) {
+        // Deselect previous
+        if (selectedCell2 !== null) {
+            cellSidebar
+                .querySelector(
+                    `[data-id="${selectedCell2.replace(/"/g, '\\"')}"]`,
+                )
+                ?.classList.remove("selected2");
+        }
 
-    // (Visually) select new
-    cellEl.classList.add("selected");
+        selectedCell2 = cellEl.dataset.id as string;
+
+        // (Visually) select new
+        cellEl.classList.add("selected2");
+    }
 }
 
 function canvasPointerDown(e: PointerEvent) {
@@ -245,8 +332,12 @@ function canvasPointerDown(e: PointerEvent) {
 
     canvas.setPointerCapture(e.pointerId);
 
-    if (e.button === 0 && !e.shiftKey) mainDrawing = true;
-    else if (e.button === 1 || (e.button === 0 && e.shiftKey)) dragging = true;
+    if (e.button === 0 && !e.shiftKey) {
+        mainDrawing = true;
+    } else if (e.button === 2 && !e.shiftKey) {
+        secondaryDrawing = true;
+    } else if (e.button === 1 || (e.button === 0 && e.shiftKey))
+        dragging = true;
 
     lastX = e.pageX;
     lastY = e.pageY;
@@ -263,11 +354,11 @@ function canvasPointerDown(e: PointerEvent) {
         return;
     }
 
-    if (mainDrawing) canvasDraw(e);
+    if (mainDrawing || secondaryDrawing) canvasDraw(e);
 }
 
 function canvasPointerMove(e: PointerEvent) {
-    if (mainDrawing) canvasDraw(e);
+    if (mainDrawing || secondaryDrawing) canvasDraw(e);
     else if (dragging) canvasDrag(e);
 }
 
@@ -308,7 +399,9 @@ function canvasDraw(e: PointerEvent) {
         const interpX = Math.round(oldCX + (dx * i) / steps);
         const interpY = Math.round(oldCY + (dy * i) / steps);
 
-        const cell = generateSelectedCell();
+        const cell = generateSelectedCell(
+            mainDrawing ? selectedCell0 : selectedCell2,
+        );
         if (!cell) continue; // No cell selected
 
         registeredGrid.write(interpX, interpY, cell);
@@ -339,6 +432,7 @@ function canvasDrag(e: PointerEvent) {
 function canvasPointerUp(e: PointerEvent) {
     dragging = false;
     mainDrawing = false;
+    secondaryDrawing = false;
 }
 
 function onCanvasResize() {
@@ -351,11 +445,12 @@ function onCanvasResize() {
 
 /**
  * Get the selected cell
+ * @param selected  The selected cell to generate
  */
-function generateSelectedCell(): fcell_t | null {
-    if (selectedCell === null) return null;
+function generateSelectedCell(selected: string | null): fcell_t | null {
+    if (selected === null) return null;
 
-    let cell = registeredCells.get(selectedCell);
+    let cell = registeredCells.get(selected);
     if (!cell) return null; // Invalid cell selector!?
 
     return cell.cell.quantum ? cell.cell.exec(cell.data as any) : cell;

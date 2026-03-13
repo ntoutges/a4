@@ -1,51 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <title>PiCO Template</title>
+        <link rel="icon" type="image/x-icon" href="favicon.ico" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<head>
-    <title>PiCO Template</title>
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="style.css" />
 
-    <link rel="stylesheet" href="style.css">
-    <script src="index.ts" type="module" defer></script>
-</head>
+        <script src="index.ts" type="module" defer></script>
+    </head>
 
-<body id="app">
+    <body id="app">
+        <div id="main-content">
+            <canvas id="canvas"></canvas>
 
-    <div id="main-content">
-        <canvas id="canvas"></canvas>
+            <!-- Sidebar -->
+            <div id="sidebar">
+                <div id="sidebar-title">Cells</div>
 
-        <!-- Sidebar -->
-        <div id="sidebar">
-            <div id="sidebar-title">Cells</div>
+                <!-- Holds available cells -->
+                <div id="sidebar-cells"></div>
 
-            <!-- Holds availble cells -->
-            <div id="sidebar-cells"></div>
+                <!-- Simulation Controls -->
+                <div id="sidebar-controls">
+                    <div id="controls-buttons">
+                        <button id="control-play" class="control-button">
+                            <span class="material-symbols-outlined"
+                                >play_arrow</span
+                            >
+                        </button>
+                        <button id="control-pause" class="control-button">
+                            <span class="material-symbols-outlined">pause</span>
+                        </button>
+
+                        <button id="control-step" class="control-button">
+                            <span class="material-symbols-outlined"
+                                >skip_next</span
+                            >
+                        </button>
+                    </div>
+
+                    <!-- Indicate progress towards next tick -->
+                    <div id="controls-indicator">
+                        <div id="controls-indicator-bar"></div>
+                    </div>
+
+                    <div id="controls-speed">
+                        <div id="speed-label">Speed</div>
+
+                        <input
+                            id="speed-slider"
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value="0.5"
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
 
-    </div>
+        <!-- Stats Overlay -->
+        <div id="stats">
+            <div id="time-avg" class="stats-block">
+                <div class="stats-label">AVG</div>
+                <div class="stats-sim">0.00ms</div>
+                <div class="stats-render">0.00ms</div>
+                <div class="stats-anim">0.00ms</div>
+            </div>
 
-    <!-- Stats Overlay -->
-    <div id="stats">
-
-        <div id="time-avg" class="stats-block">
-            <div class="stats-label">AVG</div>
-            <div class="stats-sim">0.00ms</div>
-            <div class="stats-render">0.00ms</div>
-            <div class="stats-anim">0.00ms</div>
+            <div id="time-max" class="stats-block">
+                <div class="stats-label">MAX</div>
+                <div class="stats-sim">0.00ms</div>
+                <div class="stats-render">0.00ms</div>
+                <div class="stats-anim">0.00ms</div>
+            </div>
         </div>
-
-        <div id="time-max" class="stats-block">
-            <div class="stats-label">MAX</div>
-            <div class="stats-sim">0.00ms</div>
-            <div class="stats-render">0.00ms</div>
-            <div class="stats-anim">0.00ms</div>
-        </div>
-
-    </div>
-
-    </div>
-
-</body>
-
+    </body>
 </html>

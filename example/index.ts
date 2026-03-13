@@ -9,6 +9,6 @@ ui.registerCells(pg.cells);
 ui.registerRule(pg.rule);
 ui.registerGrid(myGrid);
 
-setInterval(() => {
-    ui.tick();
-}, 100);
+// setInterval(() => {
+//     ui.tick();
+// }, 100);
