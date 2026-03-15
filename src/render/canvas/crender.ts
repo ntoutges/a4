@@ -243,30 +243,35 @@ export class CanvasRender implements _renders.base_renderer<_canvas.canvas_ctx> 
      * @param factor    The factor to scale by (e.g. `2` to zoom in to 200%, `0.5` to zoom out to 50%)
      * @param originX   The x-coordinate of the zoom origin point, as a fraction of the viewport width (e.g. `0` to zoom towards the left edge, `0.5` to zoom towards the center, `1` to zoom towards the right edge)
      * @param originY   The y-coordinate of the zoom origin point, as a fraction of the viewport height (e.g. `0` to zoom towards the top edge, `0.5` to zoom towards the center, `1` to zoom towards the bottom edge)
-     * @returns           The new scale factor after scaling
+     * @returns         The new x/y coordinates of the zoom origin point in grid coordinates, after applying the zoom
      *
      * @TODO FIXME
      */
-    scale(factor: number, originX: number, originY: number): void {
-        if (factor === this.vs) return; // No change in scale, do nothing
+    scale(
+        factor: number,
+        originX: number,
+        originY: number,
+    ): { x: number; y: number } {
+        if (factor === this.vs) return { x: this.vx, y: this.vy }; // No change in scale, do nothing
 
-        // Reset camera offset to 0
-        const prescale_vx = this.vx / this.vs;
-        const prescale_vy = this.vy / this.vs;
+        // Get change from previous scale factor to new scale factor, relative to previous scale factor
+        const delta = (factor - this.vs) / this.vs;
 
-        // Scale the virtual camera
+        // Get origin point in absolute grid coordinates
+        const origin_vx = originX * this.vw + this.vx;
+        const origin_vy = originY * this.vh + this.vy;
+
+        // LERP from old camera position to new camera position
+        this.vx += delta * origin_vx;
+        this.vy += delta * origin_vy;
+
+        // Update scale factor
         this.vs = factor;
-
-        // Compute new camera offset after scaling
-        const postscale_vx = this.vx / this.vs;
-        const postscale_vy = this.vy / this.vs;
-
-        // LERP camera offset to find new offset after zoom
-        this.vx += prescale_vx - postscale_vx;
-        this.vy += prescale_vy - postscale_vy;
 
         // Mark canvas as dirty to trigger re-rendering
         this.scale_dirty = true;
+
+        return { x: this.vx, y: this.vy };
     }
 
     /**

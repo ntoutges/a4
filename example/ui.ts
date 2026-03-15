@@ -38,6 +38,7 @@ let lastCY: number = 0;
 // Position in the canvas
 let gx: number = 0;
 let gy: number = 0;
+let gls: number = 0; // log(scale)
 
 // Store render stats
 let stat_sim_tot = 0;
@@ -77,6 +78,7 @@ canvas.addEventListener("pointerdown", canvasPointerDown);
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 canvas.addEventListener("pointermove", canvasPointerMove);
 canvas.addEventListener("pointerup", canvasPointerUp);
+canvas.addEventListener("wheel", canvasScale);
 canvasResizeObserver.observe(canvas);
 
 ctlPlay.addEventListener("click", simToggle);
@@ -408,6 +410,15 @@ function canvasDraw(e: PointerEvent) {
         const interpX = Math.round(oldCX + (dx * i) / steps);
         const interpY = Math.round(oldCY + (dy * i) / steps);
 
+        if (
+            interpX < 0 ||
+            interpX >= registeredGrid.width ||
+            interpY < 0 ||
+            interpY >= registeredGrid.height
+        ) {
+            continue; // Skip out-of-bounds coordinates
+        }
+
         const cell = generateSelectedCell(
             mainDrawing ? selectedCell0 : selectedCell2,
         );
@@ -442,6 +453,26 @@ function canvasPointerUp(e: PointerEvent) {
     dragging = false;
     mainDrawing = false;
     secondaryDrawing = false;
+}
+
+function canvasScale(e: WheelEvent) {
+    if (!renderer) return;
+
+    const { x, y } = getRelativeCanvasPos(e.pageX, e.pageY);
+    gls += (e.deltaY > 0 ? -1 : 1) * 0.2;
+
+    const scale = Math.exp(gls);
+    const { x: ox, y: oy } = renderer.scale(scale, x, y);
+
+    // Update grid position based on scale offset
+    gx = ox * 10;
+    gy = oy * 10;
+
+    // Update last positions
+    lastX = e.pageX;
+    lastY = e.pageY;
+    lastCX = ox;
+    lastCY = oy;
 }
 
 function onCanvasResize() {
