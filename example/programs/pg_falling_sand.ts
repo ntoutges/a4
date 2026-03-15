@@ -4,14 +4,14 @@ import { cell_t, rule_t } from "../../src/module.js";
 import "../../src/cells/color/color.js";
 import "../../src/cells/set/set.js";
 import "../../src/cells/not/not.js";
-import "../../src/cells/range/range.js";
+import "../../src/cells/lerp/lerp.js";
 import "../../src/rules/spatial/spatial.js";
 import "../../src/rules/sequence/sequence.js";
 import "../../src/rules/quantum/quantum.js";
 
 // Values stolen wholecloth from Automota V2.1
 const sand = {
-    type: "range",
+    type: "lerp",
     min: {
         type: "color",
         r: 203,
