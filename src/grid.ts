@@ -6,11 +6,13 @@
  */
 
 import * as cells from "./cells.js";
+import * as caches from "./cache.js";
 
 import * as _grids from "./grid_types.js";
+import * as _cache from "./cache_types.js";
 import * as _cells from "./cell_types.js";
 import * as _diffs from "./diff_types.js";
-import { ReadonlySet2D, Set2D } from "./map2d.js";
+import { ReadonlySet2D } from "./map2d.js";
 
 /**
  * Create a grid from a 2D array of cell values, compiling the cell values into the internal format used by the automata system.
@@ -51,11 +53,6 @@ export function fill(
     return new Grid(cellsArray, compiledFillValue, options);
 }
 
-type cache_entry_t = {
-    proto: _cells.fcell_t; // The cell to compare against when updating the grid
-    cache: Set2D<number>; // The full cache
-};
-
 class Grid implements _grids.grid_t {
     readonly height: number;
     readonly width: number;
@@ -69,19 +66,12 @@ class Grid implements _grids.grid_t {
     private readonly fillValue: _cells.fcell_t;
 
     /** Set of all differences since the last `cldiff` call */
-    private readonly _diffs: Required<_diffs.diffs> = {
+    private readonly _diffs: Required<_diffs.fdiffs> = {
         cdiffs: [],
-        ddiffs: [],
     };
 
-    /** Map cell descriptors to their associated cache */
-    private readonly _cache: Map<string, cache_entry_t> = new Map();
-
-    /**
-     * Set of all cache entries that cannot be indexed directly by `desc` (!optim.descmatch)
-     * N(ot) D(esc) M(atch) Cache Etnries
-     */
-    private readonly _ndmCacheEntries: Set<cache_entry_t> = new Set();
+    /** Map cache descriptors to their entries */
+    private readonly _cache: Map<string, _cache.base_cache> = new Map();
 
     constructor(
         cells: _cells.fcell_t[][],
@@ -127,6 +117,7 @@ class Grid implements _grids.grid_t {
                     x,
                     y,
                     to: cell,
+                    from: cell,
                 });
             }
         }
@@ -169,103 +160,38 @@ class Grid implements _grids.grid_t {
         if (cells.equals(old, cell)) return;
 
         // Track difference
-        this._updateCache(x, y, old, cell);
-        this._diffs.cdiffs.push({ x, y, to: cell });
+        this._diffs.cdiffs.push({ x, y, to: cell, from: old });
 
         this.cells[y][x] = cell;
     }
 
-    diffs(): Required<_diffs.diffs> {
+    diffs(): Required<_diffs.fdiffs> {
         return this._diffs;
+    }
+
+    chdiff(): void {
+        // Update caches
+        for (const cache of this._cache.values()) cache.update();
     }
 
     cldiff(): void {
         this._diffs.cdiffs.splice(0);
-        this._diffs.ddiffs.splice(0);
+
+        // Tell caches about the cleared diffs
+        for (const cache of this._cache.values()) cache.clear();
     }
 
-    cache(cell: _cells.fcell_t): ReadonlySet2D<number> {
-        // Build and insert a new cache
-        if (!this._cache.has(cell.data.metadata.descriptor)) {
-            this._buildCache(cell);
-        }
-        return this._cache.get(cell.data.metadata.descriptor)!.cache;
-    }
+    cache(cache: _cache.cache_t, query?: string): ReadonlySet2D<number> {
+        if (query === undefined) query = caches.identifier(cache); // Build query string
 
-    /**
-     * Build the initial state for the cache for some cell type
-     * @param proto  The cell to use as the prototype of the cache
-     * @returns     The built cache
-     */
-    private _buildCache(proto: _cells.fcell_t): void {
-        const cache = new Set2D<number>();
+        // Cache already exists; return it
+        if (this._cache.has(query)) return this._cache.get(query)!.get();
 
-        // Check prototype cell against all current cells to initialize cache
-        for (const y in this.cells) {
-            const row = this.cells[y];
-            for (const x in row) {
-                const cell = row[x];
+        // Cache doesn't yet exist; compile and store it
+        const compiled = caches.compile(cache, this);
+        this._cache.set(query, compiled);
 
-                if (cells.matches(proto, cell)) cache.add(+x, +y);
-            }
-        }
-
-        const entry = {
-            cache,
-            proto,
-        };
-
-        // Build + insert cache entry
-        this._cache.set(proto.data.metadata.descriptor, entry);
-
-        // Add cache entry `ndmCacheEntries` set if unable `optim.descmatch` not enabled
-        if (!proto.data.metadata.optim.descmatch)
-            this._ndmCacheEntries.add(entry);
-    }
-
-    /**
-     * Update the internal cache based on some diff
-     * @param x     The location being updated
-     * @param y     The location being updated
-     * @param from  The old cell to be replaced
-     * @param to    The new cell to replace
-     */
-    private _updateCache(
-        x: number,
-        y: number,
-        from: _cells.fcell_t,
-        to: _cells.fcell_t,
-    ) {
-        // Remove `from` from any cache entries
-        // OPTIMIZATION! Index by descriptor
-        if (from.data.metadata.optim.descmatch) {
-            const desc = from.data.metadata.descriptor;
-
-            if (this._cache.has(desc)) {
-                this._cache.get(desc)!.cache.delete(x, y);
-            }
-        }
-        // Check against unoptimized entries
-        for (const entry of this._ndmCacheEntries) {
-            if (cells.matches(entry.proto, from)) {
-                entry.cache.delete(x, y);
-            }
-        }
-
-        // Add `to` to matching cache entries
-        if (to.data.metadata.optim.descmatch) {
-            const desc = to.data.metadata.descriptor;
-
-            if (this._cache.has(desc)) {
-                this._cache.get(desc)!.cache.add(x, y);
-            }
-        }
-        // Check against unoptimized entries
-        for (const entry of this._ndmCacheEntries) {
-            if (cells.matches(entry.proto, to)) {
-                entry.cache.add(x, y);
-            }
-        }
+        return compiled.get();
     }
 
     /**

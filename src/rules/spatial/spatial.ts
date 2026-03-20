@@ -13,6 +13,9 @@ import * as _cells from "../../cell_types.js";
 import * as _grids from "../../grid_types.js";
 import * as _diffs from "../../diff_types.js";
 
+// Import caches for speed gains
+import "../../cache/cell/cell.js";
+
 export type spatial_rule = {
     type: "spatial";
     before: string;
@@ -311,7 +314,11 @@ function preexec(
 
     const origin = rule.reqs[rule.originReq];
 
-    const cache = grid.cache(origin.cell);
+    const cache = grid.cache({
+        type: "cell",
+        cell: origin.cell,
+    });
+    console.log(cache.size());
 
     // Heuristic: Too many points; Switch to rendering all cells
     if (cache.size() > (grid.width * grid.height) / 4) {

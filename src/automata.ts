@@ -26,6 +26,8 @@ export function step(grid: _grids.grid_t, rule: _rules.frule_t): void {
         return;
     }
 
+    grid.chdiff(); // Update cache
+
     const diffs = execute(grid, grid.diffs(), rule);
 
     grid.cldiff(); // Clear old diffs for this tick
@@ -64,7 +66,6 @@ function execute(
     // Store all cell differences resulting from running the rule on the grid
     const allDiffs: Required<_diffs.diffs> = {
         cdiffs: [],
-        ddiffs: [],
     };
 
     // Keep track of all cell differences resulting from running the rule on the grid
@@ -134,9 +135,6 @@ function subexec(
 
     const cdiffs = diffs.cdiffs;
 
-    /** @TODO Handle ddiffs */
-    if (diffs.ddiffs) throw new Error("Unhandled diff type!");
-
     // Make copies of cdiff objects to avoid modifying the original diffs returned by the rule execution
     for (const i in cdiffs) {
         cdiffs[i] = { ...cdiffs[i] };
@@ -177,9 +175,6 @@ function apply(grid: _grids.grid_t, diffs: Required<_diffs.diffs>) {
     for (const cdiff of diffs.cdiffs) {
         grid.write(cdiff.x, cdiff.y, cdiff.to);
     }
-
-    // @TODO Handle DDIFFS
-    if (diffs.ddiffs.length) throw new Error("Unhandled diff type!");
 }
 
 /**

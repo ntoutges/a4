@@ -309,7 +309,10 @@ function preexec(
         };
     }
 
-    const cache = grid.cache(rule.req);
+    const cache = grid.cache({
+        type: "cell",
+        cell: rule.req,
+    });
 
     // Heuristic: Too many points; Switch to rendering all cells
     if (cache.size() > (grid.width * grid.height) / 4) {

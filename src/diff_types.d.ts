@@ -14,6 +14,11 @@ export type cdiff = {
     to: cells.fcell_t;
 };
 
+export type fcdiff = cdiff & {
+    /** The old state of the cell at the offset */
+    from: cells.fcell_t;
+};
+
 /**
  * Data Differences in the grid data registry
  * @TODO FILL OUT
@@ -23,7 +28,9 @@ export type ddiff = {};
 export type diffs = {
     /** The Cell DIFFerenecS that this rule declares */
     cdiffs: cdiff[];
+};
 
-    /** The Data DIFFerences that this rule declares */
-    ddiffs?: ddiff[];
+export type fdiffs = {
+    /** The Full Cell DIFFerenecS that this rule declares */
+    cdiffs: fcdiff[];
 };

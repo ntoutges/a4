@@ -1,5 +1,6 @@
 import * as cells from "./cell_types";
 import * as diffs from "./diff_types";
+import * as cache from "./cache_types";
 import { ReadonlySet2D } from "./map2d.js";
 
 export type grid_options_t = {
@@ -78,7 +79,12 @@ export interface grid_t {
      * Get the differences since the last `cldiff` command
      * @returns The internal diffs. Do _NOT_ attempt to modify these values
      */
-    diffs(): Required<diffs.diffs>;
+    diffs(): Required<diffs.fdiffs>;
+
+    /**
+     * Run cache updates and other necessary updates on (now) finalized diff list
+     */
+    chdiff(): void;
 
     /**
      * Clear diff list
@@ -87,16 +93,20 @@ export interface grid_t {
 
     /**
      * Get the cache for some cell type. If the cache doesn't already exist, it will be created
-     * @param cell  The cell to buld/search through
+     * @param cache The cache query to get the cache for
+     * @param query Optional query string (representing the cache data) for faster cache retrieval.
      * @returns     The cache, where every entry represents a cell in the grid
      */
-    cache(cell: cells.fcell_t): ReadonlySet2D<number>;
+    cache(cache: cache.cache_t, query?: string): ReadonlySet2D<number>;
 }
 
 /**
  * Represents the grid, while removing the ability to edit
  */
-export interface readonly_grid_t extends Omit<grid_t, "write" | "cldiff"> {}
+export interface readonly_grid_t extends Omit<
+    grid_t,
+    "write" | "cldiff" | "chdiff"
+> {}
 
 /**
  * Representse a slice of the cell grid, used for rules that need to access multiple cells at once
