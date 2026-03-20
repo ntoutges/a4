@@ -269,10 +269,10 @@ export const rule = {
 
 export const cells = {
     sand,
+    air,
     stone,
     water,
     fish,
-    air,
 };
 
 export const fill = air;

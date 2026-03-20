@@ -149,7 +149,7 @@ function subexec(
         cdiff.x += x;
         cdiff.y += y;
 
-        const key = getReservationKey(grid, x + cdiff.x, y + cdiff.y);
+        const key = getReservationKey(grid, x, y);
 
         // This diff steps on a reserved cell, skip
         if (reserved.has(key)) return false;

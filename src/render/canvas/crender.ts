@@ -110,6 +110,7 @@ export class CanvasRender implements _renders.base_renderer<_canvas.canvas_ctx> 
 
         this.canvas = renderer.canvas;
         this.ctx = renderer.canvas.getContext("2d")!;
+        this.ctx.imageSmoothingEnabled = false;
 
         // Initialize viewport dimensions and chunking strategy based on initial canvas size
         this.update();
@@ -134,6 +135,7 @@ export class CanvasRender implements _renders.base_renderer<_canvas.canvas_ctx> 
         this.context.ctx.resetTransform();
         this.context.ctx.scale(this.cell_size, this.cell_size);
         this.context.ctx.translate(x - chunk.gx, y - chunk.gy); // Get offset relative to chunk
+        this.ctx.imageSmoothingEnabled = false;
 
         const result = cells.render(cell, this.context);
 
@@ -149,6 +151,8 @@ export class CanvasRender implements _renders.base_renderer<_canvas.canvas_ctx> 
      * Render chunk data to the canvas
      */
     animate(): void {
+        this.ctx.imageSmoothingEnabled = false;
+
         // Precompute chunk constants
         const scale_factor = this.cell_size * this.vs;
         const vwidth = this.chunk_width * scale_factor;
@@ -460,6 +464,8 @@ export class CanvasRender implements _renders.base_renderer<_canvas.canvas_ctx> 
 
                 for (let ccy = curr_min_y; ccy <= curr_max_y; ccy++) {
                     for (let ccx = curr_min_x; ccx <= curr_max_x; ccx++) {
+                        if (!this.chunks.has(ccx, ccy)) continue; // Chunk doesn't exist, skip
+
                         const chunk = this.getChunk(ccx, ccy, true);
 
                         const dest_x = (chunk.cx - cx) * candidate.vw;
@@ -543,6 +549,7 @@ export class CanvasRender implements _renders.base_renderer<_canvas.canvas_ctx> 
         canvas.height = vh * this.cell_size;
 
         const ctx = canvas.getContext("2d")!;
+        ctx.imageSmoothingEnabled = false; // Disable anti-aliasing when scaling up chunks to preserve pixelated look
 
         const gx = cx * vw;
         const gy = cy * vh;
