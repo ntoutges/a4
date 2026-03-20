@@ -245,14 +245,14 @@ function animate() {
 // Update stats
 function stats() {
     document.querySelector<HTMLElement>("#time-avg .stats-sim")!.textContent =
-        fp_stat(stat_anm_tot / stat_anm_ct, 6);
+        fp_stat(stat_sim_tot / stat_sim_ct, 6);
     document.querySelector<HTMLElement>(
         "#time-avg .stats-render",
     )!.textContent = fp_stat(stat_ren_tot / stat_ren_ct, 6);
     document.querySelector<HTMLElement>("#time-avg .stats-anim")!.textContent =
         fp_stat(stat_anm_tot / stat_anm_ct, 6);
     document.querySelector<HTMLElement>("#time-max .stats-sim")!.textContent =
-        fp_stat(stat_anm_max, 6);
+        fp_stat(stat_sim_max, 6);
     document.querySelector<HTMLElement>(
         "#time-max .stats-render",
     )!.textContent = fp_stat(stat_ren_max, 6);
@@ -406,6 +406,8 @@ function canvasDraw(e: PointerEvent) {
     const dy = cy - oldCY;
     const steps = Math.max(Math.abs(dx), Math.abs(dy));
 
+    let lastIX = oldCX;
+    let lastIY = oldCY;
     for (let i = 0; i <= steps; i++) {
         const interpX = Math.round(oldCX + (dx * i) / steps);
         const interpY = Math.round(oldCY + (dy * i) / steps);
@@ -414,7 +416,8 @@ function canvasDraw(e: PointerEvent) {
             interpX < 0 ||
             interpX >= registeredGrid.width ||
             interpY < 0 ||
-            interpY >= registeredGrid.height
+            interpY >= registeredGrid.height ||
+            (interpX === lastIX && interpY === lastIY)
         ) {
             continue; // Skip out-of-bounds coordinates
         }
@@ -425,6 +428,9 @@ function canvasDraw(e: PointerEvent) {
         if (!cell) continue; // No cell selected
 
         registeredGrid.write(interpX, interpY, cell);
+
+        lastIX = interpX;
+        lastIY = interpY;
     }
 
     // Render for immediate visual feedback
