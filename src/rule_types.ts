@@ -17,16 +17,16 @@ export type frule_t = {
 
 export type base_rule = {
     metadata: {
-        /** The minimum x coordinate of the rule's bounding box */
+        /** The minimum x coordinate of the rule's bounding box (inclusive) */
         minX: number;
 
-        /** The minimum y coordinate of the rule's bounding box */
+        /** The minimum y coordinate of the rule's bounding box (inclusive) */
         minY: number;
 
-        /** The maximum x coordinate of the rule's bounding box */
+        /** The maximum x coordinate of the rule's bounding box (exclusive) */
         maxX: number;
 
-        /** The maximum y coordinate of the rule's bounding box */
+        /** The maximum y coordinate of the rule's bounding box (exclusive) */
         maxY: number;
 
         /** Optimizations that can be applied to this rule */

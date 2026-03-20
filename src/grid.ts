@@ -73,6 +73,12 @@ class Grid implements _grids.grid_t {
     /** Map cache descriptors to their entries */
     private readonly _cache: Map<string, _cache.base_cache> = new Map();
 
+    /**
+     * Keep track of reverse order of cache entries
+     * Allows caches that rely on other caches to be updated in the correct order
+     */
+    private readonly _cacheOrder: string[] = [];
+
     constructor(
         cells: _cells.fcell_t[][],
         fillValue: _cells.fcell_t,
@@ -171,14 +177,14 @@ class Grid implements _grids.grid_t {
 
     chdiff(): void {
         // Update caches
-        for (const cache of this._cache.values()) cache.update();
+        for (const key of this._cacheOrder) this._cache.get(key)!.update();
     }
 
     cldiff(): void {
         this._diffs.cdiffs.splice(0);
 
         // Tell caches about the cleared diffs
-        for (const cache of this._cache.values()) cache.clear();
+        for (const key of this._cacheOrder) this._cache.get(key)!.clear();
     }
 
     cache(cache: _cache.cache_t, query?: string): ReadonlySet2D<number> {
@@ -188,6 +194,8 @@ class Grid implements _grids.grid_t {
         if (this._cache.has(query)) return this._cache.get(query)!.get();
 
         // Cache doesn't yet exist; compile and store it
+        this._cacheOrder.unshift(query); // Track cache order for updates
+
         const compiled = caches.compile(cache, this);
         this._cache.set(query, compiled);
 

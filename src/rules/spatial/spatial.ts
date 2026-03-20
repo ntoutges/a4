@@ -14,7 +14,7 @@ import * as _grids from "../../grid_types.js";
 import * as _diffs from "../../diff_types.js";
 
 // Import caches for speed gains
-import "../../cache/cell/cell.js";
+import "../../cache/bbox/bbox.js";
 
 export type spatial_rule = {
     type: "spatial";
@@ -315,10 +315,13 @@ function preexec(
     const origin = rule.reqs[rule.originReq];
 
     const cache = grid.cache({
-        type: "cell",
-        cell: origin.cell,
+        type: "bbox",
+        minX: rule.metadata.minX,
+        minY: rule.metadata.minY,
+        maxX: rule.metadata.maxX,
+        maxY: rule.metadata.maxY,
+        base: origin.cell,
     });
-    console.log(cache.size());
 
     // Heuristic: Too many points; Switch to rendering all cells
     if (cache.size() > (grid.width * grid.height) / 4) {
